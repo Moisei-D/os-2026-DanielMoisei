@@ -1,0 +1,467 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with pdfLaTeX on Overleaf.
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+
+\definecolor{codebackground}{HTML}{F2F2F2}
+\definecolor{placeholderfill}{HTML}{FAFAFA}
+\definecolor{placeholderborder}{HTML}{D9D9D9}
+\definecolor{commentgray}{HTML}{707070}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=5pt}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  language=bash,
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+
+% The report compiles even before screenshots are added. Once a file with the
+% expected name exists in figures/, its placeholder is replaced automatically.
+% The optional first argument controls the width for screenshots with unusually
+% wide, narrow, or tall aspect ratios.
+\newcommand{\taskfigure}[4][0.72\textwidth]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figures/#2}{%
+      \includegraphics[width=#1,height=0.48\textheight,keepaspectratio]{figures/#2}%
+    }{%
+      \fcolorbox{placeholderborder}{placeholderfill}{%
+        \parbox[c][5.3cm][c]{0.91\textwidth}{%
+          \centering\color{commentgray}\itshape
+          Screenshot not added yet.\par\medskip
+          Expected file: \texttt{\detokenize{figures/#2}}}}
+    }
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% Cover page
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+  \begin{center}
+    \IfFileExists{figures/LOGO_UTM.jpg}{%
+      \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    }{%
+      \fbox{\parbox[c][1.7cm][c]{3.4cm}{\centering\textbf{UTM LOGO}}}\par
+    }
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 3\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: The Command Line: Shell, Pipes and Text Filters\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău -- 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+% -----------------------------------------------------------------------------
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+This laboratory work examined how a Unix shell interprets command lines before a program is executed, using Zsh interactively and Bash for the required scripts. The practical exercises covered command completion and history, built-in and external commands, wildcard expansion, quoting, redirection, command chaining, background jobs, pipelines, text filters, and a first Bash script.
+
+The purpose of the work was to use the command line efficiently, predict shell expansion, control the standard input and output streams, and answer concrete questions about structured text by combining small filters. A generated access log containing 500 records was used as a reproducible data set.
+
+The work was completed on a Linux system under the user account \texttt{moiseid}. Interactive exercises were performed in Zsh in the working directory \texttt{\textasciitilde/os-lab3}; the two deliverable scripts were executed explicitly with Bash. The screenshots record the local command aliases, \texttt{PATH}, installed login shells, and directory contents used for the observations below.
+
+\subsection*{Preparation of the data set}
+
+\begin{lstlisting}
+mkdir -p ~/os-lab3 && cd ~/os-lab3
+for i in $(seq 1 500); do
+  echo "2026-10-05 10:$(printf %02d $((i % 60))) user$((i % 7)) $([ $((i % 5)) -eq 0 ] && echo FAIL || echo OK) /page$((i % 4))"
+done > access.log
+head -3 access.log ; wc -l access.log
+\end{lstlisting}
+
+The first three records had the expected five fields: date, time, user, result, and page. The final check printed \texttt{500 access.log}, confirming that the data set was complete.
+
+\newpage
+\section{Move Fast and Find Help}
+
+\subsection{Tab completion and command history}
+
+Typing \inlinecmd{ls /usr/sh} and pressing Tab twice displayed the possible entries whose paths began with that prefix. Typing \inlinecmd{cd /et} and pressing Tab once completed the unique path to \texttt{/etc/}. Thus, completion either inserts the unambiguous remainder or lists alternatives when several matches exist.
+
+After three different commands had been executed, \texttt{Ctrl+R} started reverse incremental history search. Entering a distinctive fragment selected the earlier command containing it, and Enter executed that recalled command.
+
+\taskfigure[0.47\textwidth]{part1-tab-completion.png}{Tab completion alternatives for a partially typed path}{tab-completion}
+
+\subsection{Built-ins, external commands, and PATH}
+
+\begin{lstlisting}
+type cd ; type ls ; type echo ; which ls
+echo $PATH
+echo $PATH | tr ':' '\n'
+nosuchprog ; echo "exit code: $?"
+\end{lstlisting}
+
+Both \texttt{cd} and \texttt{echo} were reported as shell built-ins. In the interactive Zsh session, \texttt{type ls} showed that \texttt{ls} first resolved to the alias \texttt{ls --color=tty}; \texttt{which ls} displayed the alias and the underlying executable at \texttt{/usr/bin/ls}. The \texttt{cd} command must be a built-in because it changes the current directory of the running shell process. An external child process could change only its own working directory and would leave the parent shell unchanged after it exited.
+
+During the recorded run, \texttt{PATH} contained six directories: \texttt{\textasciitilde/.local/bin}, \texttt{\textasciitilde/.local/share/zinit/polaris/bin}, \texttt{/usr/local/bin}, \texttt{/usr/bin}, \texttt{/var/lib/snapd/snap/bin}, and \texttt{\textasciitilde/.dotnet/tools}. The shell searches them from left to right when a command contains no slash, and the underlying \texttt{ls} executable was found in \texttt{/usr/bin}.
+
+\taskfigure[0.58\textwidth]{part1-type-which.png}{Identification of built-ins, the ls alias, and its executable}{type-which}
+\taskfigure[0.94\textwidth]{part1-path.png}{The six directories contained in PATH}{path-directories}
+
+The nonexistent command produced exit status \texttt{127}, the conventional shell status for ``command not found.'' The \texttt{-t} option of \texttt{ls} sorts entries by modification time, newest first unless the order is reversed with another option.
+
+\taskfigure[0.48\textwidth]{part1-missing-command.png}{Exit code returned by Zsh for a command that was not found}{missing-command}
+
+\subsection{Help without a browser}
+
+\begin{lstlisting}
+man ls
+ls --help | head
+man -k "list directory"
+help cd
+\end{lstlisting}
+
+The manual page provided the detailed interface of the external \texttt{ls} program, while \texttt{ls --help} displayed a concise option summary. The \texttt{man -k} command searched manual-page descriptions by keyword. Since \texttt{cd} is implemented by the shell, \texttt{help cd} displayed Bash's built-in documentation.
+
+\newpage
+\section{What the Shell Does to a Command Line}
+
+\subsection{Test files}
+
+\begin{lstlisting}
+mkdir -p ~/os-lab3/play && cd ~/os-lab3/play
+touch a.c b.c file1.txt file2.txt notes.txt "alfa beta.txt"
+ls
+\end{lstlisting}
+
+The directory contained two C source names, three ordinary text-file names, and one filename containing a space. This controlled set made each expansion result predictable.
+
+\taskfigure[0.70\textwidth]{part2-play-files.png}{Files created in the play directory}{play-files}
+
+\subsection{Predictions and observed results}
+
+Table~\ref{tab:expansions} records the predictions made before execution and the output observed afterwards. The value of the home directory and the weekday are specific to the execution environment.
+
+\small
+\begin{longtable}{|p{0.22\textwidth}|p{0.22\textwidth}|p{0.23\textwidth}|p{0.24\textwidth}|}
+\caption{Predictions and results of shell expansion}\label{tab:expansions}\\
+\hline
+\textbf{Command} & \textbf{Prediction} & \textbf{Real output} & \textbf{Explanation} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Command} & \textbf{Prediction} & \textbf{Real output} & \textbf{Explanation} \\
+\hline
+\endhead
+\texttt{echo *.c} & \texttt{a.c b.c} & \texttt{a.c b.c} & The shell expanded the matching filenames before running \texttt{echo}. \\
+\hline
+\texttt{echo file?.txt} & \texttt{file1.txt file2.txt} & \texttt{file1.txt file2.txt} & The question mark matched exactly one character. \\
+\hline
+\texttt{echo [a-b]*} & Names beginning with a or b & \texttt{a.c alfa beta.txt b.c} & The bracket expression matched an initial \texttt{a} or \texttt{b}. \\
+\hline
+\texttt{echo *.xyz} & Literal \texttt{*.xyz} & \texttt{*.xyz} & With the current shell settings, the unmatched glob remained unchanged. \\
+\hline
+\texttt{ls alfa beta.txt} & Two missing-name errors & Errors for \texttt{alfa} and \texttt{beta.txt} & The unquoted space separated two arguments. \\
+\hline
+\texttt{ls "alfa beta.txt"} & The single filename & \texttt{alfa beta.txt} & Double quotes preserved the space inside one argument. \\
+\hline
+\texttt{echo '\$HOME' "\$HOME" \textbackslash\$HOME} & Literal, expanded, literal & \texttt{\$HOME /home/moiseid \$HOME} & Single quotes and the backslash prevented parameter expansion; double quotes allowed it. \\
+\hline
+\texttt{echo \{1..5\}; echo \$((7 * 6))} & \texttt{1 2 3 4 5} and \texttt{42} & \texttt{1 2 3 4 5} and \texttt{42} & The shell performed brace expansion and arithmetic expansion. \\
+\hline
+\texttt{echo "today is \$(date +\%A), I am \$(whoami)"} & Weekday and current user & \texttt{today is Tuesday, I am moiseid} & Command substitution inserted the output of both commands. \\
+\hline
+\texttt{touch log\{1..3\}.txt \&\& ls log*} & Three log files & \texttt{log1.txt log2.txt log3.txt} & Brace expansion created three names and the glob selected them. \\
+\hline
+\end{longtable}
+\normalsize
+
+\taskfigure[0.56\textwidth]{part2-globbing.png}{Observed wildcard, brace, arithmetic, and command-substitution results}{globbing-results}
+
+The \texttt{echo} command itself did not inspect the directory. The shell performed pathname expansion first and passed the resulting names to \texttt{echo} as arguments. The unquoted command \inlinecmd{ls alfa beta.txt} failed because word splitting produced two names that did not exist. It can be fixed either by quoting the name, \inlinecmd{ls "alfa beta.txt"}, or by escaping the space, \inlinecmd{ls alfa\ beta.txt}.
+
+\taskfigure[0.66\textwidth]{part2-space-filename.png}{Failure caused by an unquoted space and two corrected forms}{space-filename}
+
+Single quotes preserve every character literally until the closing quote. Double quotes also keep spaces inside one argument, but still allow parameter expansion, command substitution, and arithmetic expansion. A backslash protects the next character. When \texttt{ls} displays \texttt{'alfa beta.txt'} with quotes, the quotes are presentation added to make the space unambiguous; they are not part of the filename.
+
+\taskfigure[0.48\textwidth]{part2-quoting.png}{Single quotes, double quotes, and backslash quoting}{quoting}
+
+\newpage
+\section{Redirection, Chaining, and Jobs}
+
+\subsection{Standard output and standard error}
+
+\begin{lstlisting}
+cd ~/os-lab3
+ls /etc /nope > out.txt 2> err.txt
+wc -l out.txt ; cat err.txt
+ls /etc /nope > all.txt 2>&1 ; tail -2 all.txt
+echo first > notes.md ; echo second >> notes.md ; cat notes.md
+wc -l < access.log
+\end{lstlisting}
+
+In the first command, file descriptor 1, standard output, was redirected to \texttt{out.txt}; therefore that file received the \texttt{/etc} listing, which contained 311 lines on this system. File descriptor 2, standard error, was redirected independently to \texttt{err.txt}, which received the diagnostic for \texttt{/nope}. The \texttt{>} operator replaced a file's previous content, whereas \texttt{>>} appended to it.
+
+\taskfigure[0.54\textwidth]{part3-streams.png}{Standard output and standard error redirected to separate files}{separate-streams}
+
+The order of redirections changed their meaning. In \inlinecmd{> all.txt 2>&1}, standard output was first attached to the file and standard error was then duplicated from the new standard output, so both streams entered \texttt{all.txt}. In \inlinecmd{2>&1 > all.txt}, standard error was first duplicated from the terminal, after which only standard output moved to the file. The error consequently remained visible in the terminal.
+
+\taskfigure[0.52\textwidth]{part3-redirection-order.png}{Comparison of the two redirection orders}{redirection-order}
+
+The command \inlinecmd{wc -l < access.log} received data through standard input and therefore knew no filename to print; it displayed only \texttt{500}. In contrast, \inlinecmd{wc -l access.log} opened a named argument and included that name after the count.
+
+\subsection{Chaining operators}
+
+\begin{lstlisting}
+ls /nope 2> /dev/null || echo "failed with code $?"
+mkdir -p tmp && cd tmp && echo "I am in $(pwd)" ; cd ~/os-lab3
+\end{lstlisting}
+
+The semicolon runs the following command regardless of the preceding exit status. The \texttt{\&\&} operator runs its right-hand command only when the left-hand command succeeds, while \texttt{||} runs its right-hand command only when the left-hand command fails. Accordingly, \texttt{ls /nope} triggered the fallback message with exit code 2. The chained directory changes succeeded and printed \texttt{/home/moiseid/os-lab3/tmp}; the two commands separated by a semicolon then printed \texttt{first} and \texttt{second} unconditionally.
+
+\taskfigure[0.57\textwidth]{part3-operators.png}{Behavior of the semicolon, AND, and OR command operators}{operators}
+
+\subsection{Background job control}
+
+\begin{lstlisting}
+sleep 100 &
+jobs ; kill %1 ; jobs
+\end{lstlisting}
+
+The ampersand started \texttt{sleep} asynchronously and returned control to the prompt. The \texttt{jobs} built-in listed it as job 1 with PID 91311, \texttt{kill \%1} sent a termination signal to that job, and the next status display showed that it had terminated.
+
+\taskfigure[0.50\textwidth]{part3-background-job.png}{Starting, listing, and stopping a background job}{background-job}
+
+\newpage
+\section{Questions Answered with One-Liners}
+
+Each pipeline below was saved in \texttt{oneliners.sh}. The artificial access log is deterministic, so its counts can be checked independently: the page totals sum to 500 and the failure counts per user sum to 100.
+
+\subsection{Q1: Number of failed requests}
+
+\begin{lstlisting}
+grep -c FAIL access.log
+\end{lstlisting}
+
+The command printed \texttt{100}; one of every five generated requests had result \texttt{FAIL}.
+\taskfigure[0.44\textwidth]{part4-q1.png}{Number of failed requests}{q1}
+
+\subsection{Q2: Distinct requested pages}
+
+\begin{lstlisting}
+cut -d' ' -f5 access.log | sort -u | awk 'BEGIN { print "Requested pages:" } { pages[NR]=$0 } END { for (i=1; i<=NR; i++) print pages[i]; print "Number of different pages: " NR }'
+\end{lstlisting}
+
+There were four pages: \texttt{/page0}, \texttt{/page1}, \texttt{/page2}, and \texttt{/page3}.
+\taskfigure[0.48\textwidth]{part4-q2.png}{Number and names of distinct requested pages}{q2}
+
+\subsection{Q3: Requests per page}
+
+\begin{lstlisting}
+cut -d' ' -f5 access.log | sort | uniq -c | sort -rn
+\end{lstlisting}
+
+Each of the four pages received exactly 125 requests; their sum was 500.
+\taskfigure[0.54\textwidth]{part4-q3.png}{Request count for each page}{q3}
+
+\subsection{Q4: Users with the most failures}
+
+\begin{lstlisting}
+grep FAIL access.log | cut -d' ' -f3 | sort | uniq -c | sort -rn | awk 'NR == 1 { maximum=$1 } $1 == maximum'
+\end{lstlisting}
+
+Users \texttt{user3} and \texttt{user5} tied for the maximum with 15 failures each. Every other user had 14 failures, so all per-user counts summed to 100.
+\taskfigure[0.60\textwidth]{part4-q4.png}{Users with the largest number of failed requests}{q4}
+
+\subsection{Q5: Requests made by user3}
+
+\begin{lstlisting}
+printf 'user3 requests: '; grep -c ' user3 ' access.log; printf 'user3 failed requests: '; grep ' user3 ' access.log | grep -c FAIL
+\end{lstlisting}
+
+The result was 72 requests made by \texttt{user3}, of which 15 failed.
+\taskfigure[0.48\textwidth]{part4-q5.png}{Total and failed requests for user3}{q5}
+
+\subsection{Q6: Last three failures}
+
+\begin{lstlisting}
+grep FAIL access.log | tail -3 | cut -d' ' -f2-3
+\end{lstlisting}
+
+The last three matching records, reduced to time and user, were \texttt{10:10 user0}, \texttt{10:15 user5}, and \texttt{10:20 user3}.
+\taskfigure[0.52\textwidth]{part4-q6.png}{Time and user of the last three failed requests}{q6}
+
+\subsection{Q7: Login shells in /etc/passwd}
+
+\begin{lstlisting}
+cut -d: -f7 /etc/passwd | sort | uniq -c | sort -rn
+\end{lstlisting}
+
+The seventh colon-separated field was extracted from every account and equal shell paths were counted. The system contained 21 accounts using \texttt{/usr/bin/nologin}, 16 using \texttt{/sbin/nologin}, 14 using \texttt{/usr/sbin/nologin}, and 2 using \texttt{/bin/bash}. One account each used \texttt{/usr/bin/zsh}, \texttt{/sbin/shutdown}, \texttt{/sbin/halt}, and \texttt{/bin/sync}.
+\taskfigure[0.60\textwidth]{part4-q7.png}{Login shells and the number of accounts using each shell}{q7}
+
+\subsection{Q8: Why long listing adds one line}
+
+\begin{lstlisting}
+printf 'ls /etc count: '; ls /etc | wc -l; printf 'ls -l /etc count: '; ls -l /etc | wc -l
+\end{lstlisting}
+
+The prediction was that the long-listing pipeline would contain exactly one extra line. Ordinary \texttt{ls /etc} produced 310 lines. With \texttt{-l}, \texttt{ls} added a leading \texttt{total} line that reports the filesystem blocks used by the listed entries, so the second pipeline produced 311 lines. The pipe counted this header as well, producing the predicted difference of one.
+\taskfigure[0.36\textwidth]{part4-q8.png}{Comparison of line counts for ordinary and long directory listings}{q8}
+
+\subsection{Complete run and bonus}
+
+\begin{lstlisting}
+bash oneliners.sh
+\end{lstlisting}
+
+The complete script produced all answers consecutively. The bonus regular expression selected failed records whose minute ended in zero. It matched 50 lines in this generated data set.
+\taskfigure[0.33\textwidth]{part4-full-run.png}{Full execution of oneliners.sh}{full-oneliners}
+
+\newpage
+\section{The First Bash Script}
+
+\subsection{Implementation}
+
+\begin{lstlisting}
+#!/bin/bash
+# usage: ./report.sh access.log
+log=$1
+if [ ! -f "$log" ]; then
+    echo "no such file: $log" >&2
+    exit 1
+fi
+total=$(wc -l < "$log")
+fails=$(grep -c FAIL "$log")
+echo "$total requests, $fails failed"
+for user in user{0..6}; do
+    count=$(grep FAIL "$log" | grep -c " $user ")
+    echo "$user: $count failures"
+done
+\end{lstlisting}
+
+The loop expanded the sequence from \texttt{user0} through \texttt{user6}. For each user it filtered the failed records, counted the records containing that exact space-delimited username, and printed the result.
+
+\taskfigure[0.47\textwidth]{part5-script-source.png}{Completed contents of report.sh}{script-source}
+
+\subsection{Successful execution}
+
+\begin{lstlisting}
+chmod +x report.sh
+./report.sh access.log
+\end{lstlisting}
+
+The script reported \texttt{500 requests, 100 failed}. Users 0, 1, 2, 4, and 6 each had 14 failures, while users 3 and 5 each had 15.
+
+\taskfigure[0.53\textwidth]{part5-script-run.png}{Execution of report.sh with the generated access log}{script-run}
+
+The first line, \texttt{\#!/bin/bash}, is the shebang. When the file is executed directly, it tells the kernel to use \texttt{/bin/bash} as its interpreter. Before \inlinecmd{chmod +x report.sh}, direct execution fails with a permission-denied error because the executable permission bit is absent, although \inlinecmd{bash report.sh access.log} can still ask Bash to read the file explicitly.
+
+The command is typed as \inlinecmd{./report.sh} because the current directory is normally not present in \texttt{PATH}. The explicit \texttt{./} path selects the file in the current directory and avoids accidentally executing a different program with the same name from a searched directory.
+
+\subsection{Error handling}
+
+\begin{lstlisting}
+./report.sh nope.log ; echo "exit code: $?"
+\end{lstlisting}
+
+The diagnostic was written with \texttt{\textgreater\&2} so that it used the standard error stream and could be redirected independently from normal report output. The explicit \inlinecmd{exit 1} returned a nonzero status to communicate failure to the calling shell or another script. The following \texttt{echo} consequently displayed exit code 1.
+
+\taskfigure[0.43\textwidth]{part5-script-error.png}{Error handling and exit status for a missing input file}{script-error}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory demonstrated that the shell performs substantial processing before a program receives its arguments. Tab completion and history search accelerated interactive use, while \texttt{type}, \texttt{which}, \texttt{PATH}, manual pages, and built-in help explained how commands are located and documented. The expansion exercises showed that the shell, rather than \texttt{echo}, resolves wildcard patterns and that quoting determines whether spaces and special characters remain literal.
+
+Redirection made the distinction between standard output and standard error visible, including the left-to-right significance of redirection order. The chaining operators used exit statuses to control later commands, and job control allowed a process to run asynchronously and then be terminated from the shell.
+
+Finally, pipelines composed \texttt{grep}, \texttt{cut}, \texttt{sort}, \texttt{uniq}, \texttt{wc}, \texttt{head}, \texttt{tail}, \texttt{tr}, and \texttt{awk} into reproducible answers about the access log. The completed script added argument handling, input validation, error reporting, variables, a loop, and meaningful exit status. Together, these exercises established a practical basis for efficient Linux command-line work and small automation tasks.
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\noindent[1] Operating Systems Laboratory Work No. 3. \textit{The Command Line: Shell, Pipes and Text Filters}. FCIM / FAF / UTM, 2026--2027.
+
+\vspace{0.8cm}
+\noindent[2] GNU Bash manual and Linux manual pages consulted through \texttt{help} and \texttt{man} during the laboratory.
+
+\end{document}

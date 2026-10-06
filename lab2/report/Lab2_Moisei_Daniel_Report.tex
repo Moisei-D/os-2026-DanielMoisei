@@ -1,0 +1,336 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+
+\definecolor{codebackground}{HTML}{F2F2F2}
+\definecolor{placeholderfill}{HTML}{FAFAFA}
+\definecolor{placeholderborder}{HTML}{D9D9D9}
+\definecolor{commentgray}{HTML}{707070}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+
+\newcommand{\taskfigure}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#1}{%
+      \includegraphics[width=0.94\textwidth,height=0.55\textheight,keepaspectratio]{#1}%
+    }{%
+      \fcolorbox{placeholderborder}{placeholderfill}{%
+        \parbox[c][5.5cm][c]{0.91\textwidth}{%
+          \centering\color{commentgray}\itshape
+          Screenshot not added yet.\par\medskip
+          Expected file: \texttt{\detokenize{#1}}}}
+    }
+    \caption{#2}
+    \label{fig:#3}
+  \end{figure}
+}
+
+\newcommand{\evidenceblock}[4]{%
+  The evidence for this exercise is shown in Figure~\ref{fig:#3}.
+  \taskfigure{#1}{#2}{#3}
+  \noindent\textbf{Comment and observation}\par
+  \smallskip
+  \noindent #4\par\medskip
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \IfFileExists{figures/LOGO_UTM.jpg}{%
+      \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    }{%
+      \fbox{\parbox[c][1.7cm][c]{3.4cm}{\centering\textbf{UTM LOGO}}}\par
+    }
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.4cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.5cm}
+    {\bfseries\fontsize{36}{40}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 2\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{20}{24}\selectfont Topic: Meet the OS You Will Build\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău -- 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+This laboratory work introduces xv6, a compact Unix-like teaching operating system implemented in C for the RISC-V architecture. The work covers the complete path from source code to a running system: obtaining the repository, cross-compiling the kernel and user programs, booting the system with QEMU, using its shell, reading both user-space and kernel-space code, and adding a new user program.
+
+Unlike the previous laboratory, where Linux was inspected from the outside, xv6 exposes both sides of an operating-system service. A user program issues a system call, and a corresponding kernel handler performs the privileged operation. The small size of xv6 makes this boundary practical to inspect directly.
+
+The required answers from \texttt{notes.md} are integrated into this report. Each command group has a predictable screenshot filename and a ready-written explanation, so the remaining work is to run the commands and upload the resulting screenshots to the \texttt{figures} folder.
+
+\newpage
+\section{Theoretical Background}
+
+\subsection{xv6 Architecture}
+
+xv6 is a small Unix-like operating system used for teaching. It contains a privileged kernel that manages processes, memory, files, devices, and system calls, together with ordinary user programs that execute with restricted privileges. The current teaching version targets RISC-V and is commonly executed inside the QEMU emulator.
+
+The source tree reflects this separation. The \texttt{kernel/} directory contains the operating-system implementation, including scheduling, virtual memory, the filesystem, device drivers, and system-call handlers. The \texttt{user/} directory contains applications such as \texttt{ls}, \texttt{cat}, \texttt{echo}, and the shell.
+
+\subsection{System Calls and User Programs}
+
+User programs cannot directly perform privileged operations. Instead, they call interfaces declared in \texttt{user/user.h}; the call crosses into the kernel, which validates the request and executes the corresponding handler. For example, \texttt{cat} uses file-related calls such as \texttt{open}, \texttt{read}, \texttt{write}, and \texttt{close}, while the new \texttt{sleep} program requests that the kernel suspend it for a specified number of clock ticks.
+
+\newpage
+\section{Prepare the xv6 Source Tree}
+
+\subsection{Open or Clone the Repository}
+
+\begin{lstlisting}
+cd ~/xv6-riscv 2>/dev/null || \
+  git clone https://github.com/mit-pdos/xv6-riscv ~/xv6-riscv
+cd ~/xv6-riscv
+ls
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-source-tree.png}
+  {The xv6 repository and its main source-tree entries}
+  {source-tree}
+  {The repository contains the \texttt{kernel/} directory, the \texttt{user/} directory, the \texttt{Makefile}, and project documentation. This confirms that both the privileged operating-system code and the ordinary programs that run on top of it are available in the same compact source tree.}
+
+\newpage
+\section{Build and Boot xv6}
+
+\subsection{Compile and Launch the System}
+
+\begin{lstlisting}
+make qemu
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-build-boot.png}
+  {Successful compilation and boot of xv6 under QEMU}
+  {build-boot}
+  {The build system cross-compiled the xv6 kernel and its user programs for RISC-V, created the filesystem image, and launched QEMU. The messages \texttt{xv6 kernel is booting} and \texttt{init: starting sh}, followed by the \texttt{\$} prompt, confirm that the kernel initialized successfully and started the first user-space shell.}
+
+\noindent\textbf{Leaving QEMU.}
+To exit the emulator, press Ctrl-A, release the keys, and then press X.
+
+\newpage
+\section{Use xv6 as a Unix System}
+
+\subsection{Run Built-in Programs}
+
+\begin{lstlisting}
+$ ls
+$ cat README
+$ echo hello xv6
+$ wc README
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-xv6-programs.png}
+  {Execution of built-in xv6 user programs}
+  {xv6-programs}
+  {Three programs shipped with xv6 are \texttt{ls}, \texttt{cat}, and \texttt{echo}; the screenshot also demonstrates \texttt{wc}. Their command-line behavior is intentionally familiar because xv6 implements a small Unix environment with files, processes, and a shell.}
+
+\subsection{Use a Pipe}
+
+\begin{lstlisting}
+$ ls | grep c
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-xv6-pipe.png}
+  {A pipeline connecting ls to grep inside xv6}
+  {xv6-pipe}
+  {A pipe requires process management and inter-process communication. The shell must create separate processes for \texttt{ls} and \texttt{grep}, create a kernel-managed pipe, connect the standard output of the first process to the standard input of the second, and coordinate their execution. The xv6 shell supports familiar Unix syntax, but it is intentionally smaller and provides fewer features than the Linux shell used in Laboratory Work No. 1.}
+
+\subsection{Optional Kernel Test Suite}
+
+\begin{lstlisting}
+$ usertests -q
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-usertests.png}
+  {Optional xv6 kernel test-suite result}
+  {usertests}
+  {The user tests exercise many kernel services and user-visible interfaces. A successful result provides broader confirmation that process, memory, filesystem, and system-call behavior remains correct. This step is optional because the complete suite can take some time to run.}
+
+\newpage
+\section{Read the xv6 Source}
+
+\subsection{Inspect User Programs}
+
+Exit QEMU before reading the host-side source tree.
+
+\begin{lstlisting}
+sed -n "1,40p" user/ls.c
+sed -n "1,30p" user/cat.c
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-user-source.png}
+  {Source code of the xv6 ls and cat programs}
+  {user-source}
+  {The source shows that xv6 user programs are small C programs with a conventional \texttt{main} function and calls to the user API. The \texttt{cat} program opens input files, repeatedly reads bytes, writes them to standard output, closes each descriptor, and exits when processing is complete.}
+
+\subsection{Locate System-call Interfaces}
+
+\begin{lstlisting}
+cat user/user.h
+grep -n "sys_read\|sys_write" kernel/sysfile.c | head
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-system-calls.png}
+  {User-visible declarations and kernel implementations of file system calls}
+  {system-calls}
+  {\texttt{user/cat.c} uses \texttt{open} to obtain a file descriptor, \texttt{read} to copy file data into a buffer, \texttt{write} to send that data to standard output, \texttt{close} to release the descriptor, and \texttt{exit} to terminate. The user-visible declarations are in \texttt{user/user.h}; \texttt{sys\_read} and \texttt{sys\_write} are implemented in \texttt{kernel/sysfile.c}, at the exact line numbers printed by \texttt{grep} for the checked-out version. Code in \texttt{kernel/} runs with privilege and manages resources, whereas code in \texttt{user/} is unprivileged and must request kernel services through system calls.}
+
+\newpage
+\section{Implement the xv6 sleep Program}
+
+\subsection{Create user sleep c}
+
+Create \texttt{user/sleep.c} with the following content:
+
+\begin{lstlisting}[language=C]
+#include "kernel/types.h"
+#include "user/user.h"
+
+int
+main(int argc, char *argv[])
+{
+  if(argc != 2){
+    fprintf(2, "usage: sleep <ticks>\n");
+    exit(1);
+  }
+  sleep(atoi(argv[1]));
+  exit(0);
+}
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-sleep-source.png}
+  {Implementation of user sleep c}
+  {sleep-source}
+  {The program validates that exactly one argument was supplied. If the argument is missing or extra arguments are present, it prints the usage message to file descriptor 2 and exits with an error status. Otherwise, it converts the tick count from text to an integer, invokes the existing xv6 \texttt{sleep} system call, and exits successfully after the requested delay.}
+
+\subsection{Register the Program in the Makefile}
+
+Add \texttt{\$U/\_sleep} to the \texttt{UPROGS} list. The indentation must be a tab and the continuation backslash must remain present.
+
+\begin{lstlisting}
+UPROGS=\
+        $U/_cat\
+        $U/_echo\
+        $U/_sleep\
+        ...
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-sleep-makefile.png}
+  {The sleep program added to the Makefile UPROGS list}
+  {sleep-makefile}
+  {Adding \texttt{\$U/\_sleep} to \texttt{UPROGS} instructs the build system to compile the new user program and include its executable in the xv6 filesystem image. Without this entry, the source file could exist on the host while the \texttt{sleep} command remained unavailable inside xv6.}
+
+\subsection{Rebuild and Test}
+
+\begin{lstlisting}
+make qemu
+$ sleep 10
+$ sleep
+\end{lstlisting}
+
+\evidenceblock
+  {figures/l2-sleep-test.png}
+  {Successful execution and argument validation of the xv6 sleep program}
+  {sleep-test}
+  {The command \texttt{sleep 10} pauses for ten xv6 clock ticks and then returns to the shell prompt, confirming that the program reaches the kernel sleep service. Running \texttt{sleep} without an argument prints \texttt{usage: sleep <ticks>}, confirming that the argument-count check and error path work correctly.}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+The xv6 source was built successfully and booted under QEMU, demonstrating how a kernel, user programs, and a filesystem image are combined into a working operating system.
+
+Using commands such as \texttt{ls}, \texttt{cat}, and a pipeline showed that xv6 provides familiar Unix abstractions, while reading \texttt{user/cat.c}, \texttt{user/user.h}, and \texttt{kernel/sysfile.c} exposed the boundary between unprivileged programs and privileged system-call handlers.
+
+Implementing \texttt{user/sleep.c}, registering it in \texttt{UPROGS}, and testing both valid and invalid invocations demonstrated the complete path from a user program's source code to a real system call executed by a self-compiled kernel.
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\noindent[1] Operating Systems Lab 2 handout. \textit{Meet the OS You Will Build}. FCIM / FAF / UTM, 2026--2027.
+
+\end{document}

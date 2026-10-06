@@ -1,0 +1,461 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with pdfLaTeX on Overleaf.
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+% Store all screenshots in the figures folder.
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+
+\definecolor{codebackground}{HTML}{F2F2F2}
+\definecolor{placeholderfill}{HTML}{FAFAFA}
+\definecolor{placeholderborder}{HTML}{D9D9D9}
+\definecolor{commentgray}{HTML}{707070}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+
+\newcommand{\placeholder}[2][2.2cm]{%
+  \noindent\fcolorbox{placeholderborder}{placeholderfill}{%
+    \parbox[t][#1][t]{0.95\linewidth}{%
+      \color{commentgray}\itshape #2}}
+  \par\medskip
+}
+
+\newcommand{\question}[2]{%
+  \noindent\textbf{#1}\par
+  \placeholder[2.1cm]{#2}
+}
+
+% Usage:
+% \taskfigure{figures/task-name.jpg}{Caption text}{unique-label}
+% The report still compiles when an image is missing and shows its expected path.
+\newcommand{\taskfigure}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#1}{%
+      \includegraphics[width=0.94\textwidth,height=0.55\textheight,keepaspectratio]{#1}%
+    }{%
+      \fcolorbox{placeholderborder}{placeholderfill}{%
+        \parbox[c][5.5cm][c]{0.91\textwidth}{%
+          \centering\color{commentgray}\itshape
+          Screenshot not added yet.\par\medskip
+          Expected file: \texttt{\detokenize{#1}}}}
+    }
+    \caption{#2}
+    \label{fig:#3}
+  \end{figure}
+}
+
+% A complete report entry: screenshot, automatic reference, and the comment
+% that previously would have been written separately in report.md.
+\newcommand{\evidenceblock}[4]{%
+  The evidence for this exercise is shown in Figure~\ref{fig:#3}.
+  \taskfigure{#1}{#2}{#3}
+  \noindent\textbf{Comment and observation}\par
+  \smallskip
+  \noindent #4\par\medskip
+}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% Cover page
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+  \begin{center}
+    \IfFileExists{figures/LOGO_UTM.jpg}{%
+      \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    }{%
+      \fbox{\parbox[c][1.7cm][c]{3.4cm}{\centering\textbf{UTM LOGO}}}\par
+    }
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.4cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.5cm}
+    {\bfseries\fontsize{36}{40}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 1\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{20}{24}\selectfont Topic: The OS as a Resource Manager\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău -- 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+% -----------------------------------------------------------------------------
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+This laboratory work examines the operating system as a resource manager positioned between applications and hardware. The practical work uses a Linux virtual machine to make four core responsibilities visible: file management, process management, memory management, and device and storage management.
+
+The report is organized around commands executed in the terminal and observations derived from their output. Every numbered exercise contains its own screenshot followed immediately by a relevant comment and answer field. This integrates the observations formerly intended for \texttt{report.md} into the LaTeX report. Every placeholder must be replaced with evidence from the assigned virtual machine.
+
+The objectives of the work are to identify the Linux user, kernel, and uptime; inspect files, directories, ownership, and permissions; observe processes and the \texttt{/proc} interface; examine RAM and swap; inspect mounted filesystems and devices; and connect each observation to the resource managed by the operating system.
+
+The laboratory was completed on a 64-bit Fedora Linux system using kernel version \texttt{7.2.6-200.fc44.x86\_64}. The work was performed under the user account \texttt{moiseid} in \texttt{/home/moiseid/University/SO/os-lab1}.
+
+\newpage
+\section{Theoretical Background}
+
+\subsection{Operating Systems as Resource Managers}
+
+An operating system coordinates access to hardware and provides consistent abstractions for programs. It names and protects stored data through files and directories, creates and schedules processes, assigns virtual and physical memory, and exposes storage and other devices through controlled interfaces. These mechanisms let multiple programs share a computer without each program managing the hardware directly.
+
+Resource management can be observed from outside the kernel. File metadata shows ownership and permissions. Process listings and the \texttt{/proc} pseudo-filesystem expose process state and per-process information. Memory commands summarize RAM and swap. Filesystem and device commands show how storage and hardware are presented to users and programs.
+
+\subsection{Linux Interfaces Used in This Laboratory}
+
+The Linux shell provides commands that request services from the operating system and display the resulting state. Commands such as \texttt{ls}, \texttt{ps}, \texttt{free}, \texttt{df}, and \texttt{lsblk} summarize different managed resources. The \texttt{/proc} hierarchy is generated by the kernel, while \texttt{/dev} contains device nodes that provide file-like access to devices.
+
+The results in this report are environment-dependent. User and group names, process counts, process identifiers, memory totals, mount devices, and device entries must be recorded from the assigned virtual machine rather than copied from another system.
+
+\newpage
+\section{System Identification}
+
+Before examining the four resource-management areas, create the working directory and identify the account, kernel, and system uptime.
+
+\subsection{Working Directory and User Identity}
+
+\begin{lstlisting}
+mkdir -p ~/os-lab1 && cd ~/os-lab1
+whoami
+\end{lstlisting}
+
+\evidenceblock
+  {figures/system-user.png}
+  {Creation of the laboratory directory and identification of the current user}
+  {system-user}
+  {The laboratory directory was created at \texttt{/home/moiseid/University/SO/os-lab1}, and \texttt{whoami} identified the active user as \texttt{moiseid}. Consequently, files created during the laboratory are owned by this account unless their ownership is explicitly changed.}
+
+\subsection{Kernel Information}
+
+\begin{lstlisting}
+uname -a
+\end{lstlisting}
+
+\evidenceblock
+  {figures/system-kernel.png}
+  {Kernel and operating-system information reported by uname}
+  {system-kernel}
+  {The machine runs Linux on a host named \texttt{fedora}, with kernel \texttt{7.2.6-200.fc44.x86\_64}. The output identifies an \texttt{x86\_64} architecture and an SMP kernel with dynamic preemption, meaning it supports multiple processors and can adjust preemption behavior according to the workload.}
+
+\subsection{System Uptime}
+
+\begin{lstlisting}
+uptime
+\end{lstlisting}
+
+\evidenceblock
+  {figures/system-uptime.png}
+  {System uptime and load information}
+  {system-uptime}
+  {At 16:49:05, the system had been running for 1 hour and 17 minutes with one logged-in user. The load averages were 1.17, 0.98, and 0.73 for the previous 1, 5, and 15 minutes respectively, showing that recent activity was slightly higher than the longer-term average.}
+
+\newpage
+\section{Files and Directories}
+
+This part explores the filesystem tree, creates and removes files, and compares file permissions before and after \texttt{chmod} changes.
+
+\subsection{Navigate and Inspect}
+
+\begin{lstlisting}
+pwd                 # current directory
+ls -la /            # root directory
+ls -la ~            # home directory
+cd /etc && ls | head
+\end{lstlisting}
+
+\evidenceblock
+  {figures/files-navigation.png}
+  {Navigation through the current, root, home, and configuration directories}
+  {files-navigation}
+  {The current working directory was \texttt{/home/moiseid/University/SO/os-lab1}. Two directories directly under \texttt{/} are \texttt{/etc}, which stores system-wide configuration files, and \texttt{/home}, which contains users' home directories. The root directory contains the system hierarchy and is mostly owned by \texttt{root}, whereas the home directory contains user-specific files owned by accounts such as \texttt{moiseid}.}
+
+\subsection{Create, Copy, Rename, and Remove Files}
+
+\begin{lstlisting}
+cd ~/os-lab1
+mkdir demo && cd demo
+echo "hello operating systems" > note.txt
+cp note.txt copy.txt
+mv copy.txt renamed.txt
+ls -l
+rm renamed.txt
+\end{lstlisting}
+
+\evidenceblock
+  {figures/files-operations.png}
+  {Creation, copying, renaming, listing, and removal of files}
+  {files-operations}
+  {The command sequence created \texttt{note.txt} with the text ``hello operating systems'', copied it to \texttt{copy.txt}, and then renamed the copy to \texttt{renamed.txt}. The listing showed both \texttt{note.txt} and \texttt{renamed.txt}, each 24 bytes and owned by \texttt{moiseid:moiseid}. After \texttt{rm renamed.txt}, the renamed copy was deleted, so \texttt{note.txt} was the only created file that remained.}
+
+\subsection{Inspect Ownership and Permissions}
+
+\begin{lstlisting}
+ls -l note.txt
+chmod 600 note.txt
+ls -l note.txt
+chmod 644 note.txt
+\end{lstlisting}
+
+\evidenceblock
+  {figures/files-permissions.png}
+  {Ownership and permission changes for note.txt}
+  {files-permissions}
+  {The file owner and group were both \texttt{moiseid}. After \texttt{chmod 600}, \texttt{ls -l} displayed \texttt{-rw-------}: the first character \texttt{-} identifies a regular file, \texttt{rw-} gives the owner read and write permission, and the two \texttt{---} triplets deny all permissions to the group and other users. Mode 644 restores \texttt{rw-r--r--}, allowing the owner to read and write while the group and others may only read.}
+
+\newpage
+\section{Processes}
+
+This part lists running processes, starts and stops a background process, and inspects the information exported by the kernel through \texttt{/proc}.
+
+\subsection{List Running Processes}
+
+\begin{lstlisting}
+ps aux | head
+ps aux | wc -l      # approximate process count
+top                 # press q to quit
+\end{lstlisting}
+
+\evidenceblock
+  {figures/processes-list.png}
+  {Process listing and approximate process count}
+  {processes-list}
+  {PID 1 was \texttt{/usr/lib/systemd/systemd}, the init and service-management process that starts and supervises user-space services. The \texttt{ps aux | wc -l} command reported 582 lines, so approximately 582 processes and the listing header were present at that moment.}
+
+\evidenceblock
+  {figures/processes-list2.png}
+  {Live process view}
+  {processes-top}
+  {The live \texttt{top} view reported 575 tasks: one running and 574 sleeping, with no stopped or zombie processes. CPU time was 95.9\% idle, and the load averages were 0.89, 0.90, and 0.85. Useful columns include \texttt{PID}, \texttt{USER}, \texttt{\%CPU}, \texttt{\%MEM}, process state, accumulated CPU time, and command name. The task count differs slightly from the earlier \texttt{ps} result because the process set changes continuously and the two commands count at different moments.}
+
+\subsection{Start, Find, and Stop a Background Process}
+
+\begin{lstlisting}
+sleep 300 &         # note the printed PID
+jobs
+ps -ef | grep sleep
+kill <PID>          # replace <PID> with the observed value
+\end{lstlisting}
+
+\evidenceblock
+  {figures/processes-background.png}
+  {Creation, discovery, and termination of a background sleep process}
+  {processes-background}
+  {The shell started \texttt{sleep 300} as job \texttt{[1]} with PID \texttt{116593}. The \texttt{jobs} command showed it as a running background job, while \texttt{ps -ef | grep sleep} displayed both the \texttt{sleep} process and the temporary \texttt{grep} process. After \texttt{kill 116593}, the shell reported that job \texttt{[1]} had terminated.}
+
+\subsection{Inspect a Process Through proc}
+
+\begin{lstlisting}
+sleep 300 &
+PID=$!
+ls /proc/$PID/
+cat /proc/$PID/status | head -20
+kill $PID
+\end{lstlisting}
+
+\evidenceblock
+  {figures/processes-proc.png}
+  {Kernel information exposed for the sleep process through proc}
+  {processes-proc}
+  {For PID \texttt{118545}, the status file reported \texttt{State: S (sleeping)}, meaning the process was waiting and was not actively using the CPU. Other visible fields included the parent PID \texttt{64823}, user and group IDs of \texttt{1000}, and virtual-memory values such as \texttt{VmPeak} and \texttt{VmSize} of approximately 230556 kB. This demonstrates how \texttt{/proc} exposes kernel-maintained process metadata through a file-like interface.}
+
+\newpage
+\section{Memory}
+
+This part compares system-wide memory totals with the resident memory reported for a single sleeping process.
+
+\subsection{Inspect System Memory and Swap}
+
+\begin{lstlisting}
+free -h                       # RAM and swap totals
+cat /proc/meminfo | head -6
+\end{lstlisting}
+
+\evidenceblock
+  {figures/memory-overview.png}
+  {System-wide RAM and swap information}
+  {memory-overview}
+  {The machine had 14 GiB of RAM, with 497 MiB immediately free and 5.4 GiB available after reclaimable cache was considered. It also had 14 GiB of swap, of which approximately 756 MiB was in use. Swap is disk-backed space used to hold memory pages when keeping them in RAM is unnecessary or when RAM pressure increases. The \texttt{/proc/meminfo} values, including \texttt{MemTotal: 15560296 kB}, \texttt{MemFree: 509788 kB}, and \texttt{MemAvailable: 5673928 kB}, contain the same information in precise kilobytes, while \texttt{free -h} rounds it into human-readable units.}
+
+\subsection{Inspect Resident Memory of a Process}
+
+\begin{lstlisting}
+sleep 300 & PID=$!
+grep VmRSS /proc/$PID/status  # resident memory
+kill $PID
+\end{lstlisting}
+
+\evidenceblock
+  {figures/memory-process.png}
+  {Resident memory used by a sleep process}
+  {memory-process}
+  {The \texttt{sleep} process with PID \texttt{120278} used \texttt{2228 kB} of resident memory. Even though the process was inactive, it still required physical pages for its executable code, stack, process data, and shared-library mappings. The small value is reasonable because \texttt{sleep} performs almost no work and most shared pages are not charged exclusively to it.}
+
+\newpage
+\section{Devices and Storage}
+
+This part inspects mounted filesystems, block devices, the size of the laboratory directory, and device nodes exposed through \texttt{/dev}.
+
+\subsection{Inspect Mounted Filesystems}
+
+\begin{lstlisting}
+df -h                 # mounted filesystems and free space
+mount | head
+\end{lstlisting}
+
+\evidenceblock
+  {figures/storage-filesystems.png}
+  {Mounted filesystems and available storage space}
+  {storage-filesystems}
+  {The root filesystem \texttt{/} was mounted from \texttt{/dev/nvme0n1p6}. The \texttt{df -h} output reported a size of 235 GiB, 76 GiB used, 159 GiB available, and 33\% utilization. The \texttt{df} command summarizes capacity and usage, whereas \texttt{mount} identifies the filesystem type and options; here it showed a Btrfs filesystem mounted with the root subvolume.}
+
+\subsection{Inspect Block Devices}
+
+\begin{lstlisting}
+lsblk
+\end{lstlisting}
+
+\evidenceblock
+  {figures/storage-block-devices.png}
+  {Block devices and their hierarchy}
+  {storage-block-devices}
+  {The main physical disk was \texttt{nvme0n1}, with a capacity of 953.9 GiB. Its child partitions included \texttt{nvme0n1p1} mounted at \texttt{/boot/efi}, \texttt{nvme0n1p5} mounted at \texttt{/boot}, and \texttt{nvme0n1p6}, the 234.8 GiB partition used for \texttt{/} and \texttt{/home}. The tree indentation in \texttt{lsblk} shows that these partitions belong to the parent NVMe disk, while \texttt{zram0} is a separate compressed RAM-backed swap device.}
+
+\subsection{Measure the Laboratory Folder}
+
+\begin{lstlisting}
+pwd
+du -sh .
+\end{lstlisting}
+
+\evidenceblock
+  {figures/storage-work-folder.png}
+  {Disk space used by the laboratory working folder}
+  {storage-work-folder}
+  {The measured directory was \texttt{/home/moiseid/University/SO/os-lab1}, and \texttt{du -sh .} reported a size of 4.0 KiB. This small value reflects the limited contents stored there at the time of measurement. It will increase as additional files, screenshots, and report artifacts are added.}
+
+\subsection{Inspect Device Files}
+
+\begin{lstlisting}
+ls -l /dev | head
+\end{lstlisting}
+
+\evidenceblock
+  {figures/storage-device-files.png}
+  {Examples of device files exposed through dev}
+  {storage-device-files}
+  {One example is \texttt{/dev/console}, shown as a character device with major and minor numbers \texttt{5,1}; it represents the system console used for character-oriented input and output. The statement ``everything is a file'' means that Linux exposes devices and kernel interfaces as filesystem entries that programs can open and access using familiar file operations and permissions.}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+The operating system managed files through directories, ownership, and permissions observed with \texttt{ls -l} and \texttt{chmod}, while it managed processes through identifiers, states, scheduling, and termination observed with \texttt{ps}, \texttt{top}, \texttt{kill}, and \texttt{/proc}.
+
+Memory management was visible through \texttt{free -h} and \texttt{/proc/meminfo}, which showed how the system divided RAM among used, free, cached, and available memory and supplemented it with swap, while \texttt{VmRSS} exposed the physical memory resident for an individual process.
+
+Device and storage management was observed with \texttt{df}, \texttt{mount}, \texttt{lsblk}, and \texttt{ls -l /dev}, demonstrating how Linux organizes disks and partitions, mounts filesystems, accounts for storage, and presents hardware or virtual devices through file-like interfaces.
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\noindent[1] Operating Systems Lab 1 handout. \textit{The OS as a Resource Manager}. FCIM / FAF / UTM, 2026--2027.
+
+\vspace{1cm}
+\noindent[2] Linux manual pages consulted during the laboratory.
+
+\newpage
+\appendix
+\section{Optional Exploration}
+
+This exercise is optional and not graded. Complete it only after finishing the four required parts and only if the tools are available on the virtual machine.
+
+\begin{lstlisting}
+htop            # use instead of top, if installed
+strace -c ls    # summarize system calls used to list a directory
+\end{lstlisting}
+  
+\taskfigure
+  {figures/optional-strace.png}
+  {System calls performed by the ls command}
+  {optional-strace}
+
+\noindent\textbf{Comment and observation}\par
+\smallskip
+
+\noindent
+The \texttt{strace -c ls} command recorded 90 system calls. Most execution time
+was spent opening directories, reading directory entries, closing files, and
+retrieving file metadata, showing that even a simple \texttt{ls} command depends
+on multiple operating-system services.
+\end{document}
