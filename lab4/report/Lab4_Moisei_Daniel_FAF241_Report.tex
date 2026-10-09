@@ -1,0 +1,357 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with pdfLaTeX on Overleaf.
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+
+\definecolor{codebackground}{HTML}{F2F2F2}
+\definecolor{placeholderfill}{HTML}{FAFAFA}
+\definecolor{placeholderborder}{HTML}{D9D9D9}
+\definecolor{commentgray}{HTML}{707070}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+
+% Screenshot widths are chosen per figure so that one terminal character has
+% approximately the same physical size throughout the report. The height cap
+% allows tall xv6 captures to remain readable on a dedicated page.
+\newcommand{\taskfigure}[4][0.82\textwidth]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{figures/#2}{%
+      \includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{figures/#2}%
+    }{%
+      \fcolorbox{placeholderborder}{placeholderfill}{%
+        \parbox[c][4.8cm][c]{0.91\textwidth}{%
+          \centering\color{commentgray}\itshape
+          Replace this panel with the required terminal screenshot.\par\medskip
+          Expected file: \texttt{\detokenize{figures/#2}}}}
+    }
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \IfFileExists{figures/LOGO_UTM.jpg}{%
+      \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    }{%
+      \fbox{\parbox[c][1.7cm][c]{3.4cm}{\centering\textbf{UTM LOGO}}}\par
+    }
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 4\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: The xv6 Shell from the Outside\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to study the xv6 shell as a user-visible program and compare it with Bash. The work verified that the 
+\texttt{sleep} utility uses the current xv6 system-call name, compared shell syntax and interactive conveniences, used a small argument-printing program to reveal exactly what a process receives in \texttt{argv}, and connected the observed behavior to the implementation in \texttt{user/sh.c}.
+
+The current local xv6 source tree declares \texttt{int pause(int);} in \texttt{user/user.h}. Its shell source contains 499 lines and defines five internal command representations. The report combines those source observations with captured Bash and xv6 sessions, allowing the written explanations to be checked directly against the displayed commands and output.
+
+\newpage
+\section{Fix sleep for the Current xv6}
+
+\subsection{Identify the system-call name}
+
+\begin{lstlisting}
+cd ~/xv6-riscv
+grep -n "pause\|sleep" user/user.h
+\end{lstlisting}
+
+The current tree printed \texttt{25:int pause(int);}. Therefore the user program must call \texttt{pause}, not the older \texttt{sleep} system-call wrapper. The command name may still be \texttt{sleep}; only the C interface used inside the program changed.
+
+\taskfigure[0.43\textwidth]{part1-user-header.png}{The pause declaration found in user/user.h}{user-header}
+
+\subsection{Updated program and Makefile entry}
+
+\begin{lstlisting}[language=C]
+#include "kernel/types.h"
+#include "user/user.h"
+
+int
+main(int argc, char *argv[])
+{
+    if(argc != 2){
+        fprintf(2, "usage: sleep <ticks>\n");
+        exit(1);
+    }
+    pause(atoi(argv[1]));
+    exit(0);
+}
+\end{lstlisting}
+
+The source validates that exactly one argument was provided, converts the tick count from text to an integer, pauses the process, and exits successfully. The Makefile must include a tab-indented \texttt{\$U/\_sleep\textbackslash} entry in \texttt{UPROGS}; the trailing backslash must be the final character on its line.
+
+\taskfigure[0.70\textwidth]{part1-sleep-source.png}{Updated sleep.c and its UPROGS entry}{sleep-source}
+
+\subsection{Build and test}
+
+\begin{lstlisting}
+make qemu
+$ sleep 20
+$ sleep
+usage: sleep <ticks>
+\end{lstlisting}
+
+The first invocation blocks for approximately 20 timer ticks and then returns to the prompt. The second invocation exercises argument validation and prints the usage diagnostic because no tick count was supplied.
+
+\taskfigure[0.56\textwidth]{part1-sleep-test.png}{The sleep program running with and without a tick argument}{sleep-test}
+
+\newpage
+\section{Bash versus the xv6 Shell}
+
+\subsection{Comparison table}
+
+The Linux test directory contained \texttt{README}; the first redirection test also created \texttt{f}. Table~\ref{tab:shell-comparison} summarizes the expected output and the reason for each difference. Exact spacing and process identifiers are environment-dependent.
+
+\small
+\begin{longtable}{|p{0.23\textwidth}|p{0.19\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|}
+\caption{Bash and xv6 shell behavior}\label{tab:shell-comparison}\\
+\hline
+\textbf{Command} & \textbf{Feature} & \textbf{Bash} & \textbf{xv6 shell} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Command} & \textbf{Feature} & \textbf{Bash} & \textbf{xv6 shell} \\
+\hline
+\endhead
+\texttt{echo hello > f ; cat < f} & redirection & Prints \texttt{hello}. & Prints \texttt{hello}; both input and output redirection are implemented. \\
+\hline
+\texttt{ls | grep READ} & pipe & Prints the matching \texttt{README} entry. & Prints the matching \texttt{README} entry. \\
+\hline
+\texttt{(echo a; echo b) | wc} & grouping and list & Reports 2 lines, 2 words, and 4 bytes. & Produces the same counts; parentheses group a parsed command tree. \\
+\hline
+\texttt{echo one ; echo two} & sequence & Prints \texttt{one}, then \texttt{two}. & Prints \texttt{one}, then \texttt{two}. \\
+\hline
+\texttt{echo bg \&} & background & Runs asynchronously and usually prints a job number and PID. & Runs asynchronously, but there is no Bash-style job table or job-control message. \\
+\hline
+\texttt{ls *} & globbing & Bash expands \texttt{*} to matching names before executing \texttt{ls}. & The literal name \texttt{*} is passed to \texttt{ls}, which cannot open it. \\
+\hline
+\texttt{echo \$HOME} & variables & Prints the value of the home-directory variable. & Prints the literal text \texttt{\$HOME}. \\
+\hline
+\texttt{echo "a b"} & quotes & Prints \texttt{a b} as one argument, without quote characters. & Quotes have no special meaning; they remain in the tokens and the embedded space still separates arguments. \\
+\texttt{mkdir d ; cd d ; ls ..} & path and built-in & Changes to \texttt{d}, then finds \texttt{ls} through \texttt{PATH} and lists the parent directory. & Prints \texttt{exec cd failed}; the shell stays in the root directory, so \texttt{ls ..} lists that directory. After a standalone \texttt{cd d}, plain \texttt{ls} fails because xv6 performs no path search. \\
+\hline
+Arrow Up, Tab, Ctrl+R & history and completion & Recalls history, completes input, and searches history. & No command history, completion, or reverse search is implemented. \\
+\hline
+\end{longtable}
+\normalsize
+
+\taskfigure[0.79\textwidth]{part2-bash-comparison.png}{The comparison commands executed in Bash}{bash-comparison}
+\taskfigure[0.71\textwidth]{part2-xv6-comparison.png}{The comparison commands executed in the xv6 shell}{xv6-comparison}
+
+\subsection{Observations}
+
+Both shells support executing programs, input and output redirection, pipes, semicolon-separated lists, background execution, and parenthesized grouping. Bash additionally performs variable expansion, pathname expansion, quote removal, command lookup through \texttt{PATH}, command history, completion, reverse history search, and interactive job control. In the captured compound xv6 command, \inlinecmd{mkdir d ; cd d ; ls ..}, the shell printed \texttt{exec cd failed}: the embedded \texttt{cd} was parsed as an external command, so the shell stayed in the root directory and the following \texttt{ls ..} listed that directory.
+
+After the xv6 shell processes a standalone \inlinecmd{cd d}, its current directory is \texttt{d}. The shell passes \texttt{ls} directly to \texttt{exec}; it does not search a list of program directories. Because the xv6 user programs are stored in the root directory, the working alternative is:
+
+\begin{lstlisting}
+$ ../ls ..
+\end{lstlisting}
+
+The relative path \texttt{../ls} identifies the executable, and the second \texttt{..} is the directory argument to list. Figure~\ref{fig:ls-path} confirms both stages: a standalone \inlinecmd{cd d} changes the shell's directory, plain \inlinecmd{ls ..} then fails because xv6 performs no path search, and \inlinecmd{../ls ..} succeeds by naming the executable explicitly.
+
+\taskfigure[0.55\textwidth]{part2-ls-path.png}{Failure of plain ls after cd d and the working ../ls alternative}{ls-path}
+
+The missing feature that would be most inconvenient in daily work is command history because repeated long commands would have to be typed again. A minimal \texttt{PATH} search would be one of the easiest useful additions: when an executable name contains no slash, the shell could try a short fixed list of directories before reporting failure. Full quote handling and expansion would require deeper tokenizer and parser changes.
+
+\newpage
+\section{Who Expands the Argument Vector}
+
+\subsection{Argument-printing programs}
+
+The xv6 version includes the xv6 types and user interfaces and terminates with \texttt{exit(0)}. The Linux version includes \texttt{stdio.h}, uses the same loop, and returns zero from \texttt{main}. Both versions print the argument count and every exact string supplied by the shell.
+
+\begin{lstlisting}[language=C]
+printf("argc = %d\n", argc);
+for(int i = 0; i < argc; i++)
+    printf("argv[%d] = [%s]\n", i, argv[i]);
+\end{lstlisting}
+
+The xv6 Makefile must contain the tab-indented \texttt{\$U/\_args\textbackslash} entry. On Linux the source is built with \inlinecmd{gcc -o args args_linux.c}.
+
+\taskfigure[0.69\textwidth]{part3-args-source.png}{args.c together with its UPROGS entry}{args-source}
+
+\subsection{Observed argument behavior}
+
+In a Bash directory containing \texttt{args.c} and \texttt{args\_linux.c}, the command \inlinecmd{./args *.c "x y"} produces the following logical argument vector:
+
+\begin{lstlisting}
+argc = 4
+argv[0] = [./args]
+argv[1] = [args.c]
+argv[2] = [args_linux.c]
+argv[3] = [x y]
+\end{lstlisting}
+
+Bash replaces the wildcard with two matching filenames and removes the quote characters while preserving the enclosed space. If the directory contains a different number of \texttt{.c} files, \texttt{argc} changes accordingly.
+
+In xv6, the corresponding command produces a fundamentally different vector:
+
+\begin{lstlisting}
+argc = 4
+argv[0] = [args]
+argv[1] = [*.c]
+argv[2] = ["x]
+argv[3] = [y"]
+\end{lstlisting}
+
+The equal count in this particular example is coincidental. The xv6 shell passes \texttt{*.c} literally and treats the space between \texttt{x} and \texttt{y} as an argument separator because its tokenizer has no quote state. The quote characters remain attached to the two resulting strings.
+
+\taskfigure[0.73\textwidth]{part3-xv6-args.png}{Argument vectors printed by args in xv6}{xv6-args}
+\taskfigure[0.75\textwidth]{part3-linux-args.png}{Argument vectors printed by args under Bash}{linux-args}
+
+These results show that argument expansion is performed by the shell before the program is started. The kernel transfers the already prepared argument array during \texttt{exec}, and the program merely receives it. Bash performs pathname expansion and quote removal; xv6 implements neither operation.
+
+The extra spaces in \inlinecmd{args one              two         three} are delimiters. Both shells collapse the unquoted runs for parsing purposes and the program receives the three ordinary arguments \texttt{one}, \texttt{two}, and \texttt{three}, plus \texttt{argv[0]}. The original number of spaces cannot be recovered from \texttt{argv}.
+
+The remaining captured commands reinforce the same distinction. In xv6, \inlinecmd{args $HOME} passes the literal string \texttt{\$HOME}, while \inlinecmd{args 'single quoted'} produces two arguments that still contain the quote characters. Under Bash, \texttt{\$HOME} expands to \texttt{/home/moiseid}, and the single-quoted words arrive as one argument without the quotes.
+
+\newpage
+\section{Read the Shell Source}
+
+\subsection{Command representations and dispatch}
+
+\begin{lstlisting}
+wc -l user/sh.c
+grep -n "#define" user/sh.c
+grep -n "case " user/sh.c
+grep -n "cd" user/sh.c | head
+\end{lstlisting}
+
+In the inspected tree, \texttt{wc -l} reported 499 lines. Lines 8 to 12 define the command representations:
+
+\begin{lstlisting}[language=C]
+#define EXEC  1
+#define REDIR 2
+#define PIPE  3
+#define LIST  4
+#define BACK  5
+\end{lstlisting}
+
+\texttt{EXEC} is produced by an ordinary command with no special operator. \texttt{REDIR} is produced by \texttt{<}, \texttt{>}, or two consecutive \texttt{>} characters; \texttt{PIPE} by \texttt{|}; \texttt{LIST} by \texttt{;}; and \texttt{BACK} by \texttt{\&}. Parentheses group a nested command tree but do not introduce a sixth command type. The switch in \texttt{runcmd} handles the same five values at lines 75, 83, 93, 101, and 125 in the current file.
+
+\taskfigure[0.50\textwidth]{part4-command-kinds.png}{The five command kinds defined in user/sh.c}{command-kinds}
+\taskfigure[0.61\textwidth]{part4-command-dispatch.png}{The case labels used throughout user/sh.c}{command-dispatch}
+
+\subsection{Why cd is special}
+
+The main input loop handles \texttt{cd} near lines 164 to 172, before forking the process that executes ordinary parsed commands. A directory change affects only the process that calls \texttt{chdir}. If \texttt{cd} were a separate child program, that child would change its own working directory and then exit, leaving the shell in its original directory. The built-in must therefore run in the parent shell process.
+
+\taskfigure[0.82\textwidth]{part4-cd-handler.png}{The parent-shell code that handles cd}{cd-handler}
+
+\subsection{Connection to the experiments}
+
+The tokenizer defines whitespace and only the symbols \texttt{<|>\&;()}. There is no code that expands \texttt{*}, reads \texttt{\$}-prefixed variables, or interprets quotes. This directly explains why \texttt{ls *} receives a literal asterisk, \texttt{echo \$HOME} prints the variable name, and quoted spaces are not preserved as one xv6 argument. These are shell-language features, not automatic services supplied by the kernel or by the called program.
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory showed that even a small shell must parse syntax, build command structures, configure file descriptors, create processes, connect pipes, and preserve parent-process state for built-ins such as \texttt{cd}. The updated \texttt{sleep} program also demonstrated that a user command can retain its interface while adapting to a renamed system-call wrapper.
+
+The side-by-side experiments separated core process-control features from conveniences implemented by Bash. Both shells can redirect, pipe, sequence, group, and start commands in the background. Bash adds pathname and variable expansion, quote processing, path search, history, completion, and richer job control. The \texttt{args} program proved that these transformations occur in the shell: the kernel passes an argument vector, while the receiving program has no knowledge of the original wildcard, quotes, or extra unquoted spaces.
+
+Finally, reading \texttt{user/sh.c} connected every visible behavior to a compact implementation. The five command types and the parent-side \texttt{cd} special case explain the supported syntax, while the absence of expansion code explains the limitations observed during execution.
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\noindent[1] Operating Systems Laboratory Work No. 4. \textit{The xv6 Shell from the Outside}. FCIM / FAF / UTM, 2026-2027.
+
+\vspace{0.6cm}
+\noindent[2] MIT PDOS. \textit{xv6: a simple, Unix-like teaching operating system}, current RISC-V source tree, files \texttt{user/sh.c}, \texttt{user/user.h}, and \texttt{Makefile}.
+
+\end{document}
