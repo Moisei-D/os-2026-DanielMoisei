@@ -1,0 +1,98 @@
+qemu-system-riscv64 -machine virt -bios none -kernel kernel/kernel -m 128M -smp 3 -nographic -global virtio-mmio.force-legacy=false -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+
+xv6 kernel is booting
+
+hart 1 starting
+hart 2 starting
+init: starting sh
+$ ls .
+.              1 1 1024
+..             1 1 1024
+README         2 2 2441
+cat            2 3 35912
+echo           2 4 34808
+forktest       2 5 17744
+grep           2 6 43336
+init           2 7 35160
+kill           2 8 34712
+ln             2 9 34504
+ls             2 10 41992
+mkdir          2 11 34760
+rm             2 12 34744
+sh             2 13 57120
+stressfs       2 14 35584
+usertests      2 15 201568
+grind          2 16 50384
+wc             2 17 36880
+zombie         2 18 34056
+logstress      2 19 36728
+forphan        2 20 35520
+dorphan        2 21 34984
+sync           2 22 34160
+sleep          2 23 34488
+args           2 24 34472
+mystat         2 25 35504
+find           2 26 37288
+console        3 27 0
+$ mkdir a
+$ ls a
+.              1 28 32
+..             1 1 1024
+$ mystat README . console
+README: file, inode 2, links 1, size 2441 bytes
+.: directory, inode 1, links 2, size 1024 bytes
+console: device, inode 27, links 1, size 0 bytes
+$ ln README r2
+$ mystat README r2
+README: file, inode 2, links 2, size 2441 bytes
+r2: file, inode 2, links 2, size 2441 bytes
+$ rm README
+$ mystat r2
+r2: file, inode 2, links 1, size 2441 bytes
+$ cat r2 | wc
+48 336 2441 
+$ mkdir averyveryverylongname
+$ ls
+.              1 1 1024
+..             1 1 1024
+averyveryveryl 1 29 32
+cat            2 3 35912
+echo           2 4 34808
+forktest       2 5 17744
+grep           2 6 43336
+init           2 7 35160
+kill           2 8 34712
+ln             2 9 34504
+ls             2 10 41992
+mkdir          2 11 34760
+rm             2 12 34744
+sh             2 13 57120
+stressfs       2 14 35584
+usertests      2 15 201568
+grind          2 16 50384
+wc             2 17 36880
+zombie         2 18 34056
+logstress      2 19 36728
+forphan        2 20 35520
+dorphan        2 21 34984
+sync           2 22 34160
+sleep          2 23 34488
+args           2 24 34472
+mystat         2 25 35504
+find           2 26 37288
+console        3 27 0
+amkdir a/b
+              1 28 32
+r2             2 2 2441
+$ $ echo x > a/b/r2
+$ echo y > a/r2
+$ ln cat r2
+link cat r2: failed
+$ find . r2
+./a/b/r2
+./a/r2
+./r2
+$ find a b
+a/b
+$ QEMU: Terminated
+

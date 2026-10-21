@@ -1,3 +1,16 @@
 # Local screenshots and report assets
 *.png
 **/figures/**
+
+# Lab 5 evidence is part of the reproducible report submission.
+!lab5/report/figures/
+!lab5/report/figures/**
+
+# Lab 5 disposable experiment and LaTeX build intermediates.
+lab5/experiment*/
+lab5/__pycache__/
+lab5/report/*.aux
+lab5/report/*.log
+lab5/report/*.out
+lab5/report/*.toc
+lab5/report/Lab5_Moisei_Daniel_FAF241_Report.pdf

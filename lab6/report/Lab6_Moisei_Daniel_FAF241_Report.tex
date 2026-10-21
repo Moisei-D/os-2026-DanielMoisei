@@ -1,0 +1,197 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab6_Moisei_Daniel_FAF241_Report.tex
+% Use locally installed fonts so compilation does not depend on a network download.
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][0.82\textwidth]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 6\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Inside the xv6 File System\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to inspect the small xv6 file system from the user level and connect its visible behaviour with the kernel data structures that implement it. I decoded the fields printed by \texttt{ls}, implemented \texttt{mystat} to inspect inodes and hard links, measured the layout and file-size limits declared in \texttt{kernel/fs.h}, and implemented a recursive \texttt{find} program.
+
+All demonstrations were run in the configured \texttt{xv6-riscv} tree through QEMU. The report contains terminal captures created from those completed sessions. The tree used 1024-byte blocks, 14-byte directory-name fields, 12 direct block pointers, and a 256-entry indirect block; therefore the observed and source-level results agree.
+
+\newpage
+\section{Reading What xv6 Shows}
+
+\subsection{Types, inode numbers, and directory entries}
+
+The format printed by xv6 \texttt{ls} is \textit{name, type, inode number, size}. In \texttt{kernel/stat.h}, the constants are \texttt{T\_DIR = 1}, \texttt{T\_FILE = 2}, and \texttt{T\_DEVICE = 3}. Thus the entries \texttt{.} and \texttt{..} are directories, \texttt{README} is a regular file, and \texttt{console} is a device. Figure~\ref{fig:directory-types} also records the output of the implemented \texttt{mystat} command for one object of each type.
+
+The root directory has inode number 1, as specified by \texttt{ROOTINO} in \texttt{kernel/fs.h}. At the root, both \texttt{.} and \texttt{..} have inode 1 because the parent of the root is defined to be the root itself. The newly created empty directory \texttt{a} has a 32-byte size. A \texttt{struct dirent} contains a 2-byte inode number and a 14-byte name, so it occupies 16 bytes. Its two initial entries are \texttt{.} and \texttt{..}; therefore $2 \times 16 = 32$ bytes.
+
+\taskfigure[0.64\textwidth]{part1-directory-types.png}{xv6 directory listing, empty-directory size, and type decoding with mystat}{directory-types}
+
+\newpage
+\section{The mystat Program and Hard Links}
+
+\subsection{Implementation}
+
+The new program calls \texttt{stat()} for each path. It maps the numeric \texttt{type} field to a readable label and prints the inode, link count, and byte size. It continues after an invalid path so one error does not prevent the remaining requested paths from being inspected.
+
+\lstinputlisting[language=C,caption={Implementation of user/mystat.c}]{../mystat.c}
+
+The xv6 \texttt{Makefile} was extended with the two tab-indented \texttt{UPROGS} entries below, which caused the programs to be included in the file-system image.
+
+\begin{lstlisting}
+    $U/_mystat\
+    $U/_find\
+\end{lstlisting}
+
+\subsection{Observed hard-link behaviour}
+
+After \inlinecmd{ln README r2}, both names referred to inode 2, retained the size of 2441 bytes, and showed link count 2. After \inlinecmd{rm README}, \texttt{r2} still referred to inode 2 and its data remained readable; only the link count changed from 2 to 1. The following \texttt{cat r2 | wc} result of 2441 bytes confirms that unlinking the first name did not remove the file data.
+
+In \texttt{kernel/sysfile.c}, \texttt{sys\_unlink()} clears the directory entry and then executes \texttt{ip->nlink--} followed by \texttt{iupdate(ip)}. The data blocks are reclaimed only when the inode's link count is zero and its in-memory reference count reaches zero; that final release is handled by the inode cleanup path. xv6 therefore preserves the data while another directory entry or an open file still refers to the inode.
+
+The on-disk \texttt{struct dinode} contains \texttt{type}, \texttt{major}, \texttt{minor}, \texttt{nlink}, \texttt{size}, and \texttt{addrs[NDIRECT+1]}. Unlike a modern Linux inode, it contains no owner, group, mode, permission, or symbolic-link metadata. xv6 has no symbolic links and no permission checks.
+
+\taskfigure[0.84\textwidth]{part2-hard-links.png}{Hard-link creation, removal of one name, and preserved file contents}{hard-links}
+
+\newpage
+\section{Measured File System Limits}
+
+\subsection{Name and file-size limits}
+
+The constants read from \texttt{kernel/fs.h} were \texttt{BSIZE = 1024}, \texttt{NDIRECT = 12}, \texttt{NINDIRECT = BSIZE / sizeof(uint)}, and \texttt{DIRSIZ = 14}. Creating \texttt{averyveryverylongname} and listing the directory displayed \texttt{averyveryveryl}. The name has been truncated to the first 14 characters, exactly as \texttt{DIRSIZ} requires.
+
+Each indirect-block entry is a 4-byte block number, so the indirect block holds $1024 / 4 = 256$ addresses. The largest file uses 12 direct blocks and 256 indirect blocks:
+
+\begin{center}
+  $(12 + 256) \times 1024 = 274\,432$ bytes $= 268$ KiB.
+\end{center}
+
+\subsection{Disk layout}
+
+The build output reported \texttt{nmeta 47}: 1 boot block, 1 superblock, 31 log blocks, 13 inode blocks, and 1 bitmap block. The whole image contains 2000 blocks. Subtracting the 47 metadata blocks leaves 1953 data blocks, which is also reported by \texttt{mkfs}. The commands and their actual output are shown in Figure~\ref{fig:limits}.
+
+\taskfigure[0.92\textwidth]{part3-limits.png}{Constants, disk-layout summary, and the observed 14-character directory name}{limits}
+
+\newpage
+\section{Recursive find}
+
+\subsection{Implementation}
+
+The \texttt{find} utility opens the supplied directory, reads fixed-size \texttt{dirent} records, skips free records and the special \texttt{.}/\texttt{..} names, and constructs each full child path. It prints a path if its final component equals the requested target, then recursively visits child directories. Every opened file descriptor is closed before returning, which is necessary because xv6 processes have a small open-file limit.
+
+\lstinputlisting[language=C,caption={Implementation of user/find.c}]{../find.c}
+
+\subsection{Fresh-disk test}
+
+The test was performed after rebuilding the disk image. The tree contains three entries called \texttt{r2}: two new regular files and a hard link to \texttt{cat}. The command printed all three matching paths. The order is a directory traversal order and is not part of the specification. The second query correctly printed the directory \texttt{a/b}.
+
+\taskfigure[0.84\textwidth]{part4-find.png}{Fresh xv6 session testing recursive find}{find-test}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed the direct correspondence between xv6 file-system structures and observable user commands. Directories are files made of 16-byte directory entries; names point to inode numbers; and hard links are multiple names for one inode, not duplicate data. The source constants explain both the 14-character name limit and the 268 KiB maximum file size. The completed \texttt{mystat} and \texttt{find} utilities compiled successfully, were included in the xv6 image, and were verified in QEMU using the required link and recursive-search scenarios.
+
+\end{document}

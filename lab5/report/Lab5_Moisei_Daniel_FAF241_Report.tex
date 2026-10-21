@@ -1,0 +1,280 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab5_Moisei_Daniel_FAF241_Report.tex
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+
+\definecolor{codebackground}{HTML}{F2F2F2}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+
+\newcommand{\taskfigure}[4][0.82\textwidth]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 5\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: The File System with Your Own Hands\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to examine the Linux file system through direct experiments with the directory tree, file types, inodes, links, permissions, disks, and the kernel interfaces exposed through \texttt{/proc}. All commands were executed as the ordinary user \texttt{moiseid}; the experiment therefore exercised real permission checks rather than the exemptions available to \texttt{root}.
+
+The tests were run on Fedora Linux with a Btrfs root file system. They showed that file names are directory entries referring to inodes, hard links share an inode, symbolic links store a path, permissions are evaluated independently for files and directories, and sparse logical size is different from allocated disk space. System inspection identified a 953.9~GB NVMe disk, a 234.8~GB Btrfs root partition, 16 logical processors, and approximately 14.8~GiB of RAM. The report includes terminal evidence generated from the actual captured command output.
+
+\newpage
+\section{The Tree and the File Types}
+
+\subsection{Root hierarchy and path types}
+
+\begin{lstlisting}
+whoami
+ls /
+ls -ld /etc /etc/passwd /bin /dev/null /tmp
+ls -l /dev | head
+file /usr/bin/ls /etc/passwd /bin
+du -sh /var/log 2>/dev/null ; du -sh /usr 2>/dev/null
+\end{lstlisting}
+
+The first character printed by \inlinecmd{ls -l} identifies the object type. In the observed output, \texttt{/etc} and \texttt{/tmp} begin with \texttt{d}, so they are directories; \texttt{/etc/passwd} begins with \texttt{-}, so it is a regular file; \texttt{/bin} begins with \texttt{l}, so it is a symbolic link; and \texttt{/dev/null} begins with \texttt{c}, so it is a character device. The \texttt{file} utility independently classified \texttt{/usr/bin/ls} as a 64-bit ELF executable, \texttt{/etc/passwd} as ASCII text, and \texttt{/bin} as a symbolic link.
+
+\taskfigure[0.44\textwidth]{part1-root.png}{The top-level Linux directory tree}{root-tree}
+\taskfigure[0.86\textwidth]{part1-types-space.png}{File types, device entries, and directory disk usage}{types-space}
+
+\subsection{Observations}
+
+On this system, \texttt{/bin} is not a separate directory: it is a relative symbolic link to \texttt{usr/bin}, which resolves to \texttt{/usr/bin}. A character-device example is \texttt{/dev/null}, with major and minor numbers \texttt{1,3}. The kernel block-device listing identifies \texttt{nvme0n1} as the physical block device and \texttt{nvme0n1p6} as the root partition. The restricted execution namespace does not expose their device nodes directly under \texttt{/dev}, but \texttt{lsblk}, \texttt{df}, and \texttt{mount} consistently identify them.
+
+The measured size of \texttt{/var/log} was 907~MB, while \texttt{/usr} occupied 16~GB. Therefore \texttt{/usr} was larger by about 15.1~GB, or roughly eighteen times. These values describe the state of this machine at the time of execution and may change as packages and logs change.
+
+\newpage
+\section{Inodes and Links}
+
+\subsection{Hard and symbolic links}
+
+\begin{lstlisting}
+echo hello > notes.txt
+stat notes.txt
+ls -li notes.txt
+ln notes.txt hard.txt
+ls -li notes.txt hard.txt
+rm notes.txt
+cat hard.txt ; ls -li hard.txt
+ln -s hard.txt soft.txt
+ls -li hard.txt soft.txt
+rm hard.txt
+cat soft.txt ; ls -l soft.txt
+\end{lstlisting}
+
+The \texttt{stat} result reports the inode in the \texttt{Inode} field and the number of directory names in the \texttt{Links} field. Initially, \texttt{notes.txt} used inode \texttt{5470083} and had one link. After \inlinecmd{ln notes.txt hard.txt}, both names displayed the same inode and the link count became two.
+
+Removing \texttt{notes.txt} only removed that directory entry and reduced the inode's link count. The name \texttt{hard.txt} still referred to the same inode, so its data remained readable. In general, \texttt{rm} unlinks a name; the inode and its data can be reclaimed only after the link count reaches zero and no process still has the file open.
+
+The symbolic link used a separate inode, \texttt{5470084}, and stored the target text \texttt{hard.txt}. After that target was removed, \texttt{soft.txt} still existed as an eight-byte symbolic link, but path resolution ended at a missing name and \texttt{cat} failed. Its size was exactly eight bytes because the stored path string \texttt{hard.txt} contains eight characters.
+
+\taskfigure[0.72\textwidth]{part2-inodes-links.png}{Inode numbers, link counts, and removal behavior}{inodes-links}
+
+\subsection{Directory links and sparse allocation}
+
+On a traditional Unix file system, a new directory has link count two: one name in its parent and its own \texttt{.} entry. Each immediate subdirectory contributes one additional reference through its \texttt{..} entry, so creating \texttt{d/x} and \texttt{d/y} conceptually raises the count from two to four. The captured Btrfs file system reports a fixed directory link count of one both before and after the subdirectories are created; this is a Btrfs reporting behavior, not a change to the meaning of \texttt{.} and \texttt{..} during path traversal.
+
+The command \inlinecmd{echo x > one.txt} creates two logical bytes: the letter \texttt{x} and a newline. Nevertheless, \texttt{du} reported 4.0~KB because the file occupies a file-system allocation unit. Conversely, \inlinecmd{truncate -s 1G big.img} established a logical length of 1.0~GB without writing data blocks. It is a sparse file, so \texttt{ls} reported 1.0~GB while \texttt{du} reported zero allocated space.
+
+\taskfigure[0.72\textwidth]{part2-directories-space.png}{Directory link counts and the difference between size and allocated space}{directories-space}
+
+\newpage
+\section{Permissions}
+
+\subsection{File modes and umask}
+
+The requested numeric modes correspond to the following permission strings and typical uses:
+
+\begin{center}
+\begin{tabularx}{0.90\textwidth}{|>{\centering\arraybackslash}p{0.12\textwidth}|>{\centering\arraybackslash}p{0.22\textwidth}|X|}
+\hline
+\textbf{Mode} & \textbf{Symbolic form} & \textbf{Example use} \\
+\hline
+600 & \texttt{rw-------} & A private secret or SSH private key readable and writable only by its owner. \\
+\hline
+644 & \texttt{rw-r--r--} & A normal document that its owner edits and other users may read. \\
+\hline
+755 & \texttt{rwxr-xr-x} & A public executable or searchable directory that only its owner may modify. \\
+\hline
+700 & \texttt{rwx------} & A private directory accessible only to its owner. \\
+\hline
+\end{tabularx}
+\end{center}
+
+Ownership selects which permission triplet is checked; it does not bypass the bits in that triplet. Therefore, after \inlinecmd{chmod 000 s.txt}, the owner was still \texttt{moiseid} but the owner's read bit was clear and \texttt{cat} failed. Restoring \texttt{u+r} made the content readable again.
+
+The observed umask was \texttt{0022}. A newly created regular file starts from mode 666 and loses the masked write bits, producing 644 (\texttt{rw-r--r--}). A new directory starts from mode 777 and loses the same bits, producing 755 (\texttt{rwxr-xr-x}). The screenshot confirms both results.
+
+\taskfigure[0.72\textwidth]{part3-file-permissions.png}{File permissions, ownership checks, and umask results}{file-permissions}
+
+\subsection{Directory permissions and special bits}
+
+Read permission on a directory allows its entry names to be listed. Search or execute permission permits traversal to a known entry and access to its metadata or contents, subject to that entry's own mode. Consequently, with read-only permission on \texttt{box}, \texttt{ls box} printed \texttt{f} but \texttt{cat box/f} failed because path traversal was forbidden. With execute-only permission, listing failed but \texttt{cat box/f} succeeded because the known name could be traversed and the file itself was readable.
+
+The \texttt{s} in \texttt{-rwsr-xr-x} is the set-user-ID bit combined with owner execute permission. On a conventional installation, \texttt{passwd} is owned by \texttt{root}; the bit lets it run with the owner's effective identity so it can perform the narrowly controlled update to protected password data. The captured namespace maps privileged ownership to \texttt{nobody}, and its root mount is \texttt{nosuid}, but the mode bit remains visible. The denial from \texttt{cat /etc/shadow} confirms that an ordinary process cannot read the protected file directly.
+
+The \texttt{t} in \texttt{drwxrwxrwt} is the sticky bit. Although all users may create files in \texttt{/tmp}, it prevents one ordinary user from deleting or renaming an entry owned by another user. This allows a shared writable directory without permitting arbitrary removal of other users' temporary files.
+
+\taskfigure[0.72\textwidth]{part3-directory-special.png}{Directory read and search permissions, setuid, sticky bit, and shadow protection}{directory-special}
+
+\newpage
+\section{Disks and the Kernel as Files}
+
+\subsection{Storage layout and root utilization}
+
+The physical storage tree observed with \texttt{lsblk} was:
+
+\begin{lstlisting}
+nvme0n1                 953.9G disk
+|-nvme0n1p1               200M vfat   /boot/efi
+|-nvme0n1p2                16M
+|-nvme0n1p3             716.3G ntfs
+|-nvme0n1p4               889M ntfs
+|-nvme0n1p5                 1G ext4   /boot
+`-nvme0n1p6             234.8G btrfs  /
+\end{lstlisting}
+
+The root file system is Btrfs on \texttt{/dev/nvme0n1p6}. At measurement time, \texttt{df -hT /} reported 235~GB total, 79~GB used, 154~GB available, and 34\% utilization. The \texttt{mount} output confirmed Btrfs and showed the active compression, SSD, discard, and subvolume options.
+
+\taskfigure[0.92\textwidth]{part4-disks.png}{NVMe partitions, the Btrfs root file system, and its utilization}{disks}
+
+\subsection{CPU, memory, process identity, and descriptors}
+
+The count from \texttt{/proc/cpuinfo} was 16 logical processors. The total-memory line in \texttt{/proc/meminfo} reported 15,560,404~kB, which is about 15.6~GB in decimal units or 14.84~GiB. Free and available memory are dynamic and therefore describe only the instant at which the command ran.
+
+The first line of \texttt{/proc/self/status} was \texttt{Name: head}. The path \texttt{/proc/self} is resolved separately for the process that opens it. Although the shell launched the command, the \texttt{head} process opened and read the file, so \texttt{self} referred to \texttt{head}. Similarly, \texttt{ls -l /proc/self/fd} displayed the descriptors belonging to the \texttt{ls} process: standard input, output, error, and the descriptor used while reading its own file-descriptor directory.
+
+\taskfigure[0.70\textwidth]{part4-proc.png}{Processor count, memory information, process status, and open descriptors}{proc}
+
+\newpage
+\section{Optional Experiment: Magic Numbers}
+
+\begin{lstlisting}
+gzip -c /etc/passwd > compressed-notes.txt
+file compressed-notes.txt
+od -An -tx1 -N16 compressed-notes.txt
+\end{lstlisting}
+
+The output file deliberately retained the misleading \texttt{.txt} suffix, yet \texttt{file} identified gzip-compressed data. Its first bytes were \texttt{1f 8b 08}: \texttt{1f 8b} is the gzip magic number and \texttt{08} selects the DEFLATE compression method. The classifier therefore relied on the file header rather than its name or extension. The available \texttt{od} utility was used as the byte-display equivalent of \texttt{xxd}.
+
+\taskfigure[0.92\textwidth]{stretch-magic.png}{A gzip signature detected despite a text-file extension}{magic}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory connected visible path names to the lower-level file-system objects that Linux manages. The hard-link experiment proved that multiple names can refer to one inode and that removing one name does not necessarily remove the data. The symbolic-link experiment showed the opposite structure: the link has its own inode and stores a path that may become invalid. Directory link-count behavior also exposed a useful implementation detail: the traditional 2-plus-subdirectories model explains Unix semantics even though Btrfs reports a fixed count of one.
+
+The permission tests separated ownership from authorization and separated directory listing from directory traversal. They also demonstrated how umask derives default file and directory modes, why setuid is needed for controlled privileged operations such as password changes, and why the sticky bit is essential in shared directories. Finally, \texttt{lsblk}, \texttt{df}, \texttt{mount}, and \texttt{/proc} connected the file-oriented interface to real storage, processors, memory, processes, and descriptors. The sparse-file and magic-number experiments reinforced that logical size and filename extensions are only metadata views; actual allocation and content signatures must be inspected directly.
+
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\noindent[1] Operating Systems Laboratory Work No. 5. \textit{The File System with Your Own Hands}. FCIM / FAF / UTM, 2026-2027.
+
+\vspace{0.6cm}
+\noindent[2] Linux manual pages for \texttt{stat(1)}, \texttt{ln(1)}, \texttt{chmod(1)}, \texttt{umask(2)}, \texttt{lsblk(8)}, \texttt{df(1)}, and \texttt{proc(5)}, as installed on the test system.
+
+\end{document}
+
