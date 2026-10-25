@@ -116,7 +116,7 @@
 
 The purpose of this laboratory work was to examine the Linux file system through direct experiments with the directory tree, file types, inodes, links, permissions, disks, and the kernel interfaces exposed through \texttt{/proc}. All commands were executed as the ordinary user \texttt{moiseid}; the experiment therefore exercised real permission checks rather than the exemptions available to \texttt{root}.
 
-The tests were run on Fedora Linux with a Btrfs root file system. They showed that file names are directory entries referring to inodes, hard links share an inode, symbolic links store a path, permissions are evaluated independently for files and directories, and sparse logical size is different from allocated disk space. System inspection identified a 953.9~GB NVMe disk, a 234.8~GB Btrfs root partition, 16 logical processors, and approximately 14.8~GiB of RAM. The report includes terminal evidence generated from the actual captured command output.
+The tests were run on CachyOS Linux (Arch-based) with a Btrfs root file system. They showed that file names are directory entries referring to inodes, hard links share an inode, symbolic links store a path, permissions are evaluated independently for files and directories, and sparse logical size is different from allocated disk space. System inspection identified a 953.9~GB NVMe disk, a 457.4~GB Btrfs root partition, 16 logical processors, and approximately 14.8~GiB of RAM. The report includes screenshots of the actual terminal sessions.
 
 \newpage
 \section{The Tree and the File Types}
@@ -124,7 +124,6 @@ The tests were run on Fedora Linux with a Btrfs root file system. They showed th
 \subsection{Root hierarchy and path types}
 
 \begin{lstlisting}
-whoami
 ls /
 ls -ld /etc /etc/passwd /bin /dev/null /tmp
 ls -l /dev | head
@@ -134,14 +133,14 @@ du -sh /var/log 2>/dev/null ; du -sh /usr 2>/dev/null
 
 The first character printed by \inlinecmd{ls -l} identifies the object type. In the observed output, \texttt{/etc} and \texttt{/tmp} begin with \texttt{d}, so they are directories; \texttt{/etc/passwd} begins with \texttt{-}, so it is a regular file; \texttt{/bin} begins with \texttt{l}, so it is a symbolic link; and \texttt{/dev/null} begins with \texttt{c}, so it is a character device. The \texttt{file} utility independently classified \texttt{/usr/bin/ls} as a 64-bit ELF executable, \texttt{/etc/passwd} as ASCII text, and \texttt{/bin} as a symbolic link.
 
-\taskfigure[0.44\textwidth]{part1-root.png}{The top-level Linux directory tree}{root-tree}
-\taskfigure[0.86\textwidth]{part1-types-space.png}{File types, device entries, and directory disk usage}{types-space}
+\taskfigure[0.99\textwidth]{part1-root.png}{The top-level Linux directory tree}{root-tree}
+\taskfigure[0.90\textwidth]{part1-types-space.png}{File types, device entries, and directory disk usage}{types-space}
 
 \subsection{Observations}
 
-On this system, \texttt{/bin} is not a separate directory: it is a relative symbolic link to \texttt{usr/bin}, which resolves to \texttt{/usr/bin}. A character-device example is \texttt{/dev/null}, with major and minor numbers \texttt{1,3}. The kernel block-device listing identifies \texttt{nvme0n1} as the physical block device and \texttt{nvme0n1p6} as the root partition. The restricted execution namespace does not expose their device nodes directly under \texttt{/dev}, but \texttt{lsblk}, \texttt{df}, and \texttt{mount} consistently identify them.
+On this system, \texttt{/bin} is not a separate directory: it is a relative symbolic link to \texttt{usr/bin}, which resolves to \texttt{/usr/bin}. A character-device example is \texttt{/dev/null}, with major and minor numbers \texttt{1,3}. The commands \texttt{lsblk}, \texttt{df}, and \texttt{mount} consistently identify \texttt{nvme0n1} as the physical block device and \texttt{nvme0n1p6} as the root partition.
 
-The measured size of \texttt{/var/log} was 907~MB, while \texttt{/usr} occupied 16~GB. Therefore \texttt{/usr} was larger by about 15.1~GB, or roughly eighteen times. These values describe the state of this machine at the time of execution and may change as packages and logs change.
+The measured size of \texttt{/var/log} was 45~MB, while \texttt{/usr} occupied 13~GB. Therefore \texttt{/usr} was larger by about 13~GB, or roughly three hundred times. These values describe the state of this machine at the time of execution and may change as packages and logs change.
 
 \newpage
 \section{Inodes and Links}
@@ -158,17 +157,18 @@ rm notes.txt
 cat hard.txt ; ls -li hard.txt
 ln -s hard.txt soft.txt
 ls -li hard.txt soft.txt
+cat soft.txt
 rm hard.txt
 cat soft.txt ; ls -l soft.txt
 \end{lstlisting}
 
-The \texttt{stat} result reports the inode in the \texttt{Inode} field and the number of directory names in the \texttt{Links} field. Initially, \texttt{notes.txt} used inode \texttt{5470083} and had one link. After \inlinecmd{ln notes.txt hard.txt}, both names displayed the same inode and the link count became two.
+The \texttt{stat} result reports the inode in the \texttt{Inode} field and the number of directory names in the \texttt{Links} field. Initially, \texttt{notes.txt} used inode \texttt{601972} and had one link. After \inlinecmd{ln notes.txt hard.txt}, both names displayed the same inode and the link count became two.
 
 Removing \texttt{notes.txt} only removed that directory entry and reduced the inode's link count. The name \texttt{hard.txt} still referred to the same inode, so its data remained readable. In general, \texttt{rm} unlinks a name; the inode and its data can be reclaimed only after the link count reaches zero and no process still has the file open.
 
-The symbolic link used a separate inode, \texttt{5470084}, and stored the target text \texttt{hard.txt}. After that target was removed, \texttt{soft.txt} still existed as an eight-byte symbolic link, but path resolution ended at a missing name and \texttt{cat} failed. Its size was exactly eight bytes because the stored path string \texttt{hard.txt} contains eight characters.
+The symbolic link used a separate inode, \texttt{602007}, and stored the target text \texttt{hard.txt}. After that target was removed, \texttt{soft.txt} still existed as an eight-byte symbolic link, but path resolution ended at a missing name and \texttt{cat} failed. Its size was exactly eight bytes because the stored path string \texttt{hard.txt} contains eight characters.
 
-\taskfigure[0.72\textwidth]{part2-inodes-links.png}{Inode numbers, link counts, and removal behavior}{inodes-links}
+\taskfigure[0.90\textwidth]{part2-inodes-links.png}{Inode numbers, link counts, and removal behavior}{inodes-links}
 
 \subsection{Directory links and sparse allocation}
 
@@ -176,7 +176,7 @@ On a traditional Unix file system, a new directory has link count two: one name 
 
 The command \inlinecmd{echo x > one.txt} creates two logical bytes: the letter \texttt{x} and a newline. Nevertheless, \texttt{du} reported 4.0~KB because the file occupies a file-system allocation unit. Conversely, \inlinecmd{truncate -s 1G big.img} established a logical length of 1.0~GB without writing data blocks. It is a sparse file, so \texttt{ls} reported 1.0~GB while \texttt{du} reported zero allocated space.
 
-\taskfigure[0.72\textwidth]{part2-directories-space.png}{Directory link counts and the difference between size and allocated space}{directories-space}
+\taskfigure[0.89\textwidth]{part2-directories-space.png}{Directory link counts and the difference between size and allocated space}{directories-space}
 
 \newpage
 \section{Permissions}
@@ -205,17 +205,17 @@ Ownership selects which permission triplet is checked; it does not bypass the bi
 
 The observed umask was \texttt{0022}. A newly created regular file starts from mode 666 and loses the masked write bits, producing 644 (\texttt{rw-r--r--}). A new directory starts from mode 777 and loses the same bits, producing 755 (\texttt{rwxr-xr-x}). The screenshot confirms both results.
 
-\taskfigure[0.72\textwidth]{part3-file-permissions.png}{File permissions, ownership checks, and umask results}{file-permissions}
+\taskfigure[0.89\textwidth]{part3-file-permissions.png}{File permissions, ownership checks, and umask results}{file-permissions}
 
 \subsection{Directory permissions and special bits}
 
-Read permission on a directory allows its entry names to be listed. Search or execute permission permits traversal to a known entry and access to its metadata or contents, subject to that entry's own mode. Consequently, with read-only permission on \texttt{box}, \texttt{ls box} printed \texttt{f} but \texttt{cat box/f} failed because path traversal was forbidden. With execute-only permission, listing failed but \texttt{cat box/f} succeeded because the known name could be traversed and the file itself was readable.
+Read permission on a directory allows its entry names to be listed. Search or execute permission permits traversal to a known entry and access to its metadata or contents, subject to that entry's own mode. Consequently, with read-only permission on \texttt{box}, \texttt{ls box} printed \texttt{f} (together with an error, because the colour-enabled \texttt{ls} also tried to read the metadata of \texttt{box/f}) but \texttt{cat box/f} failed because path traversal was forbidden. With execute-only permission, listing failed but \texttt{cat box/f} succeeded because the known name could be traversed and the file itself was readable.
 
-The \texttt{s} in \texttt{-rwsr-xr-x} is the set-user-ID bit combined with owner execute permission. On a conventional installation, \texttt{passwd} is owned by \texttt{root}; the bit lets it run with the owner's effective identity so it can perform the narrowly controlled update to protected password data. The captured namespace maps privileged ownership to \texttt{nobody}, and its root mount is \texttt{nosuid}, but the mode bit remains visible. The denial from \texttt{cat /etc/shadow} confirms that an ordinary process cannot read the protected file directly.
+The \texttt{s} in \texttt{-rwsr-xr-x} is the set-user-ID bit combined with owner execute permission. Here \texttt{passwd} is owned by \texttt{root}; the bit lets it run with the owner's effective identity so it can perform the narrowly controlled update to protected password data. The denial from \texttt{cat /etc/shadow} confirms that an ordinary process cannot read the protected file directly.
 
 The \texttt{t} in \texttt{drwxrwxrwt} is the sticky bit. Although all users may create files in \texttt{/tmp}, it prevents one ordinary user from deleting or renaming an entry owned by another user. This allows a shared writable directory without permitting arbitrary removal of other users' temporary files.
 
-\taskfigure[0.72\textwidth]{part3-directory-special.png}{Directory read and search permissions, setuid, sticky bit, and shadow protection}{directory-special}
+\taskfigure[0.90\textwidth]{part3-directory-special.png}{Directory read and search permissions, setuid, sticky bit, and shadow protection}{directory-special}
 
 \newpage
 \section{Disks and the Kernel as Files}
@@ -226,25 +226,25 @@ The physical storage tree observed with \texttt{lsblk} was:
 
 \begin{lstlisting}
 nvme0n1                 953.9G disk
-|-nvme0n1p1               200M vfat   /boot/efi
+|-nvme0n1p1               200M vfat
 |-nvme0n1p2                16M
-|-nvme0n1p3             716.3G ntfs
+|-nvme0n1p3             491.3G ntfs
 |-nvme0n1p4               889M ntfs
-|-nvme0n1p5                 1G ext4   /boot
-`-nvme0n1p6             234.8G btrfs  /
+|-nvme0n1p5                 4G vfat   /boot
+`-nvme0n1p6             457.4G btrfs  /
 \end{lstlisting}
 
-The root file system is Btrfs on \texttt{/dev/nvme0n1p6}. At measurement time, \texttt{df -hT /} reported 235~GB total, 79~GB used, 154~GB available, and 34\% utilization. The \texttt{mount} output confirmed Btrfs and showed the active compression, SSD, discard, and subvolume options.
+The root file system is Btrfs on \texttt{/dev/nvme0n1p6}. At measurement time, \texttt{df -hT /} reported 458~GB total, 63~GB used, 395~GB available, and 14\% utilization. The \texttt{mount} output confirmed Btrfs and showed the active compression, SSD, discard, and subvolume options.
 
-\taskfigure[0.92\textwidth]{part4-disks.png}{NVMe partitions, the Btrfs root file system, and its utilization}{disks}
+\taskfigure[0.89\textwidth]{part4-disks.png}{NVMe partitions, the Btrfs root file system, and its utilization}{disks}
 
 \subsection{CPU, memory, process identity, and descriptors}
 
-The count from \texttt{/proc/cpuinfo} was 16 logical processors. The total-memory line in \texttt{/proc/meminfo} reported 15,560,404~kB, which is about 15.6~GB in decimal units or 14.84~GiB. Free and available memory are dynamic and therefore describe only the instant at which the command ran.
+The count from \texttt{/proc/cpuinfo} was 16 logical processors. The total-memory line in \texttt{/proc/meminfo} reported 15,566,504~kB, which is about 15.6~GB in decimal units or 14.85~GiB. Free and available memory are dynamic and therefore describe only the instant at which the command ran.
 
 The first line of \texttt{/proc/self/status} was \texttt{Name: head}. The path \texttt{/proc/self} is resolved separately for the process that opens it. Although the shell launched the command, the \texttt{head} process opened and read the file, so \texttt{self} referred to \texttt{head}. Similarly, \texttt{ls -l /proc/self/fd} displayed the descriptors belonging to the \texttt{ls} process: standard input, output, error, and the descriptor used while reading its own file-descriptor directory.
 
-\taskfigure[0.70\textwidth]{part4-proc.png}{Processor count, memory information, process status, and open descriptors}{proc}
+\taskfigure[0.90\textwidth]{part4-proc.png}{Processor count, memory information, process status, and open descriptors}{proc}
 
 \newpage
 \section{Optional Experiment: Magic Numbers}
@@ -257,7 +257,7 @@ od -An -tx1 -N16 compressed-notes.txt
 
 The output file deliberately retained the misleading \texttt{.txt} suffix, yet \texttt{file} identified gzip-compressed data. Its first bytes were \texttt{1f 8b 08}: \texttt{1f 8b} is the gzip magic number and \texttt{08} selects the DEFLATE compression method. The classifier therefore relied on the file header rather than its name or extension. The available \texttt{od} utility was used as the byte-display equivalent of \texttt{xxd}.
 
-\taskfigure[0.92\textwidth]{stretch-magic.png}{A gzip signature detected despite a text-file extension}{magic}
+\taskfigure[0.90\textwidth]{stretch-magic.png}{A gzip signature detected despite a text-file extension}{magic}
 
 \newpage
 \section*{Conclusion}

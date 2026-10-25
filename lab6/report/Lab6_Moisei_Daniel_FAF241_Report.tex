@@ -115,7 +115,7 @@
 
 The purpose of this laboratory work was to inspect the small xv6 file system from the user level and connect its visible behaviour with the kernel data structures that implement it. I decoded the fields printed by \texttt{ls}, implemented \texttt{mystat} to inspect inodes and hard links, measured the layout and file-size limits declared in \texttt{kernel/fs.h}, and implemented a recursive \texttt{find} program.
 
-All demonstrations were run in the configured \texttt{xv6-riscv} tree through QEMU. The report contains terminal captures created from those completed sessions. The tree used 1024-byte blocks, 14-byte directory-name fields, 12 direct block pointers, and a 256-entry indirect block; therefore the observed and source-level results agree.
+All demonstrations were run in the configured \texttt{xv6-riscv} tree through QEMU. The report contains screenshots of those completed sessions. The tree used 1024-byte blocks, 14-byte directory-name fields, 12 direct block pointers, and a 256-entry indirect block; therefore the observed and source-level results agree.
 
 \newpage
 \section{Reading What xv6 Shows}
@@ -126,7 +126,7 @@ The format printed by xv6 \texttt{ls} is \textit{name, type, inode number, size}
 
 The root directory has inode number 1, as specified by \texttt{ROOTINO} in \texttt{kernel/fs.h}. At the root, both \texttt{.} and \texttt{..} have inode 1 because the parent of the root is defined to be the root itself. The newly created empty directory \texttt{a} has a 32-byte size. A \texttt{struct dirent} contains a 2-byte inode number and a 14-byte name, so it occupies 16 bytes. Its two initial entries are \texttt{.} and \texttt{..}; therefore $2 \times 16 = 32$ bytes.
 
-\taskfigure[0.64\textwidth]{part1-directory-types.png}{xv6 directory listing, empty-directory size, and type decoding with mystat}{directory-types}
+\taskfigure[0.80\textwidth]{part1-directory-types.png}{xv6 directory listing, empty-directory size, and type decoding with mystat}{directory-types}
 
 \newpage
 \section{The mystat Program and Hard Links}
@@ -152,7 +152,7 @@ In \texttt{kernel/sysfile.c}, \texttt{sys\_unlink()} clears the directory entry 
 
 The on-disk \texttt{struct dinode} contains \texttt{type}, \texttt{major}, \texttt{minor}, \texttt{nlink}, \texttt{size}, and \texttt{addrs[NDIRECT+1]}. Unlike a modern Linux inode, it contains no owner, group, mode, permission, or symbolic-link metadata. xv6 has no symbolic links and no permission checks.
 
-\taskfigure[0.84\textwidth]{part2-hard-links.png}{Hard-link creation, removal of one name, and preserved file contents}{hard-links}
+\taskfigure[0.64\textwidth]{part2-hard-links.png}{Hard-link creation, removal of one name, and preserved file contents}{hard-links}
 
 \newpage
 \section{Measured File System Limits}
@@ -169,9 +169,19 @@ Each indirect-block entry is a 4-byte block number, so the indirect block holds 
 
 \subsection{Disk layout}
 
-The build output reported \texttt{nmeta 47}: 1 boot block, 1 superblock, 31 log blocks, 13 inode blocks, and 1 bitmap block. The whole image contains 2000 blocks. Subtracting the 47 metadata blocks leaves 1953 data blocks, which is also reported by \texttt{mkfs}. The commands and their actual output are shown in Figure~\ref{fig:limits}.
+The build output reported \texttt{nmeta 47}: 1 boot block, 1 superblock, 31 log blocks, 13 inode blocks, and 1 bitmap block. The whole image contains 2000 blocks. Subtracting the 47 metadata blocks leaves 1953 data blocks, which is also reported by \texttt{mkfs}. The constants and the \texttt{nmeta} line were obtained as follows, and the long-name test is shown in Figure~\ref{fig:limits}.
 
-\taskfigure[0.92\textwidth]{part3-limits.png}{Constants, disk-layout summary, and the observed 14-character directory name}{limits}
+\begin{lstlisting}
+$ grep -n "define BSIZE\|define NDIRECT\|define NINDIRECT\|define DIRSIZ" kernel/fs.h
+5:#define BSIZE   1024 // block size
+26:#define NDIRECT   12
+27:#define NINDIRECT (BSIZE / sizeof(uint))
+54:#define DIRSIZ 14
+$ make fs.img 2>&1 | grep nmeta
+nmeta 47 (boot, super, log blocks 31, inode blocks 13, bitmap blocks 1) blocks 1953 total 2000
+\end{lstlisting}
+
+\taskfigure[0.67\textwidth]{part3-limits.png}{The observed 14-character directory name in xv6}{limits}
 
 \newpage
 \section{Recursive find}
@@ -186,7 +196,7 @@ The \texttt{find} utility opens the supplied directory, reads fixed-size \texttt
 
 The test was performed after rebuilding the disk image. The tree contains three entries called \texttt{r2}: two new regular files and a hard link to \texttt{cat}. The command printed all three matching paths. The order is a directory traversal order and is not part of the specification. The second query correctly printed the directory \texttt{a/b}.
 
-\taskfigure[0.84\textwidth]{part4-find.png}{Fresh xv6 session testing recursive find}{find-test}
+\taskfigure[0.62\textwidth]{part4-find.png}{Fresh xv6 session testing recursive find}{find-test}
 
 \newpage
 \section*{Conclusion}
