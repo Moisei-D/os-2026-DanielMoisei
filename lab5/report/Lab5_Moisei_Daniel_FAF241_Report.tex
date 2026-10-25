@@ -138,7 +138,7 @@ The first character printed by \inlinecmd{ls -l} identifies the object type. In 
 
 \subsection{Observations}
 
-On this system, \texttt{/bin} is not a separate directory: it is a relative symbolic link to \texttt{usr/bin}, which resolves to \texttt{/usr/bin}. A character-device example is \texttt{/dev/null}, with major and minor numbers \texttt{1,3}. The commands \texttt{lsblk}, \texttt{df}, and \texttt{mount} consistently identify \texttt{nvme0n1} as the physical block device and \texttt{nvme0n1p6} as the root partition.
+On this system, \texttt{/bin} is not a separate directory: it is a relative symbolic link to \texttt{usr/bin}, which resolves to \texttt{/usr/bin}. A character-device example is \texttt{/dev/null}, with major and minor numbers \texttt{1,3}. A block-device example is \texttt{/dev/nvme0n1}, whose listing begins with \texttt{b} (\texttt{brw-rw----}, major and minor numbers \texttt{259,0}, group \texttt{disk}); its partition \texttt{/dev/nvme0n1p6} is also a block device (\texttt{259,6}). The commands \texttt{lsblk}, \texttt{df}, and \texttt{mount} consistently identify \texttt{nvme0n1} as the physical block device and \texttt{nvme0n1p6} as the root partition.
 
 The measured size of \texttt{/var/log} was 45~MB, while \texttt{/usr} occupied 13~GB. Therefore \texttt{/usr} was larger by about 13~GB, or roughly three hundred times. These values describe the state of this machine at the time of execution and may change as packages and logs change.
 

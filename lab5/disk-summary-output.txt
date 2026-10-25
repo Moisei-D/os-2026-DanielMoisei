@@ -1,17 +1,23 @@
-$ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS | grep -E "NAME|zram|nvme"
-NAME          SIZE TYPE FSTYPE   MOUNTPOINTS
-zram0        14.8G disk swap     [SWAP]
-nvme0n1     953.9G disk          
-├─nvme0n1p1   200M part vfat     /boot/efi
-├─nvme0n1p2    16M part          
-├─nvme0n1p3 716.3G part ntfs     
-├─nvme0n1p4   889M part ntfs     
-├─nvme0n1p5     1G part ext4     /boot
-└─nvme0n1p6 234.8G part btrfs    /home/moiseid/.codex/visualizations/2026/10/17/01a14b7b-6b52-7e13-bf9b-7fc971c7d209
+$ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+NAME          SIZE TYPE FSTYPE MOUNTPOINTS
+zram0        14.8G disk swap   [SWAP]
+nvme0n1     953.9G disk        
+├─nvme0n1p1   200M part vfat   
+├─nvme0n1p2    16M part        
+├─nvme0n1p3 491.3G part ntfs   
+├─nvme0n1p4   889M part ntfs   
+├─nvme0n1p5     4G part vfat   /boot
+└─nvme0n1p6 457.4G part btrfs  /var/tmp
+                               /var/cache
+                               /var/log
+                               /srv
+                               /home
+                               /root
+                               /
 
 $ df -hT /
 Filesystem     Type   Size  Used Avail Use% Mounted on
-/dev/nvme0n1p6 btrfs  235G   79G  154G  34% /
+/dev/nvme0n1p6 btrfs  458G   63G  395G  14% /
 
 $ mount | grep " / "
-/dev/nvme0n1p6 on / type btrfs (ro,nosuid,nodev,relatime,seclabel,compress=zstd:1,ssd,discard=async,space_cache=v2,subvolid=256,subvol=/root)
+/dev/nvme0n1p6 on / type btrfs (rw,noatime,compress=zstd:1,ssd,discard=async,space_cache=v2,subvolid=256,subvol=/@)

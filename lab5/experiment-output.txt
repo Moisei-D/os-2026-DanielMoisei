@@ -7,23 +7,19 @@ moiseid
 ===== Part 1 - Tree and file types =====
 
 $ ls /
-afs
 bin
 boot
 dev
 etc
 home
-image
 lib
 lib64
-media
 mnt
 opt
 proc
 root
 run
 sbin
-snap
 srv
 sys
 tmp
@@ -31,32 +27,32 @@ usr
 var
 
 $ ls -ld /etc /etc/passwd /bin /dev/null /tmp
-lrwxrwxrwx.  1 nobody nobody     7 Jan 16  2026 /bin -> usr/bin
-crw-rw-rw-.  1 nobody nobody  1, 3 Oct 17 17:12 /dev/null
-drwxr-xr-x.  1 nobody nobody  5396 Oct 15 14:44 /etc
--rw-r--r--.  1 nobody nobody  3569 Sep 28 14:36 /etc/passwd
-drwxrwxrwt. 81 nobody nobody 19760 Oct 17 23:13 /tmp
+lrwxrwxrwx  1 root root    7 Oct 12  2025 /bin -> usr/bin
+crw-rw-rw-  1 root root 1, 3 Oct 25 12:29 /dev/null
+drwxr-xr-x  1 root root 4248 Oct 25 18:51 /etc
+-rw-r--r--  1 root root 2599 Oct 25 12:29 /etc/passwd
+drwxrwxrwt 48 root root 1020 Oct 25 19:20 /tmp
 
 $ ls -l /dev | head
 total 0
-lrwxrwxrwx. 1 moiseid moiseid   11 Oct 17 23:13 core -> /proc/kcore
-lrwxrwxrwx. 1 moiseid moiseid   13 Oct 17 23:13 fd -> /proc/self/fd
-crw-rw-rw-. 1 nobody  nobody  1, 7 Oct 17 17:12 full
-crw-rw-rw-. 1 nobody  nobody  1, 3 Oct 17 17:12 null
-lrwxrwxrwx. 1 moiseid moiseid    8 Oct 17 23:13 ptmx -> pts/ptmx
-drwxr-xr-x. 2 moiseid moiseid    0 Oct 17 23:13 pts
-crw-rw-rw-. 1 nobody  nobody  1, 8 Oct 17 17:12 random
-drwxr-xr-x. 2 moiseid moiseid   40 Oct 17 23:13 shm
-lrwxrwxrwx. 1 moiseid moiseid   15 Oct 17 23:13 stderr -> /proc/self/fd/2
+crw-r--r--   1 root    root    10,   235 Oct 25 12:29 autofs
+drwxr-xr-x   2 root    root          200 Oct 25 17:35 block
+crw-rw----   1 root    disk    10,   234 Oct 25 12:29 btrfs-control
+drwxr-xr-x   3 root    root           60 Oct 25 11:03 bus
+drwxr-xr-x   2 root    root         6560 Oct 25 18:53 char
+crw-------   1 root    root     5,     1 Oct 25 12:29 console
+lrwxrwxrwx   1 root    root           11 Oct 25 11:03 core -> /proc/kcore
+drwxr-xr-x  18 root    root          360 Oct 25 11:03 cpu
+crw-rw----   1 root    audio   10,   259 Oct 25 12:29 cpu_dma_latency
 
 $ file /usr/bin/ls /etc/passwd /bin
-/usr/bin/ls: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=ae6605eeca6cc2f19d18fdd53a521e501df3456d, for GNU/Linux 3.2.0, stripped
+/usr/bin/ls: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=d572a7b5009dbbcb275c2e516be58e706ae248a9, for GNU/Linux 4.4.0, stripped
 /etc/passwd: ASCII text
 /bin:        symbolic link to usr/bin
 
 $ du -sh /var/log 2>/dev/null ; du -sh /usr 2>/dev/null
-907M	/var/log
-16G	/usr
+45M	/var/log
+13G	/usr
 
 ===== Part 2 - Inodes and links =====
 
@@ -65,33 +61,33 @@ $ echo hello > notes.txt
 $ stat notes.txt
   File: notes.txt
   Size: 6         	Blocks: 8          IO Block: 4096   regular file
-Device: 0,53	Inode: 5470083     Links: 1
+Device: 0,57	Inode: 605733      Links: 1
 Access: (0644/-rw-r--r--)  Uid: ( 1000/ moiseid)   Gid: ( 1000/ moiseid)
-Access: 2026-10-17 23:13:13.027972009 +0300
-Modify: 2026-10-17 23:13:13.028783270 +0300
-Change: 2026-10-17 23:13:13.028783270 +0300
- Birth: 2026-10-17 23:13:13.027972009 +0300
+Access: 2026-10-25 19:21:01.145559995 +0200
+Modify: 2026-10-25 19:21:01.146858628 +0200
+Change: 2026-10-25 19:21:01.146858628 +0200
+ Birth: 2026-10-25 19:21:01.145559995 +0200
 
 $ ls -li notes.txt
-5470083 -rw-r--r--. 1 moiseid moiseid 6 Oct 17 23:13 notes.txt
+605733 -rw-r--r-- 1 moiseid moiseid 6 Oct 25 19:21 notes.txt
 
 $ ln notes.txt hard.txt
 
 $ ls -li notes.txt hard.txt
-5470083 -rw-r--r--. 2 moiseid moiseid 6 Oct 17 23:13 hard.txt
-5470083 -rw-r--r--. 2 moiseid moiseid 6 Oct 17 23:13 notes.txt
+605733 -rw-r--r-- 2 moiseid moiseid 6 Oct 25 19:21 hard.txt
+605733 -rw-r--r-- 2 moiseid moiseid 6 Oct 25 19:21 notes.txt
 
 $ rm notes.txt
 
 $ cat hard.txt ; ls -li hard.txt
 hello
-5470083 -rw-r--r--. 1 moiseid moiseid 6 Oct 17 23:13 hard.txt
+605733 -rw-r--r-- 1 moiseid moiseid 6 Oct 25 19:21 hard.txt
 
 $ ln -s hard.txt soft.txt
 
 $ ls -li hard.txt soft.txt
-5470083 -rw-r--r--. 1 moiseid moiseid 6 Oct 17 23:13 hard.txt
-5470084 lrwxrwxrwx. 1 moiseid moiseid 8 Oct 17 23:13 soft.txt -> hard.txt
+605733 -rw-r--r-- 1 moiseid moiseid 6 Oct 25 19:21 hard.txt
+605734 lrwxrwxrwx 1 moiseid moiseid 8 Oct 25 19:21 soft.txt -> hard.txt
 
 $ cat soft.txt
 hello
@@ -100,20 +96,20 @@ $ rm hard.txt
 
 $ cat soft.txt ; ls -l soft.txt
 cat: soft.txt: No such file or directory
-lrwxrwxrwx. 1 moiseid moiseid 8 Oct 17 23:13 soft.txt -> hard.txt
+lrwxrwxrwx 1 moiseid moiseid 8 Oct 25 19:21 soft.txt -> hard.txt
 
 $ mkdir d ; ls -ld d
-drwxr-xr-x. 1 moiseid moiseid 0 Oct 17 23:13 d
+drwxr-xr-x 1 moiseid moiseid 0 Oct 25 19:21 d
 
 $ mkdir d/x d/y ; ls -ld d
-drwxr-xr-x. 1 moiseid moiseid 4 Oct 17 23:13 d
+drwxr-xr-x 1 moiseid moiseid 4 Oct 25 19:21 d
 
 $ echo x > one.txt ; ls -l one.txt ; du -h one.txt
--rw-r--r--. 1 moiseid moiseid 2 Oct 17 23:13 one.txt
+-rw-r--r-- 1 moiseid moiseid 2 Oct 25 19:21 one.txt
 4.0K	one.txt
 
 $ truncate -s 1G big.img ; ls -lh big.img ; du -h big.img
--rw-r--r--. 1 moiseid moiseid 1.0G Oct 17 23:13 big.img
+-rw-r--r-- 1 moiseid moiseid 1.0G Oct 25 19:21 big.img
 0	big.img
 
 $ rm big.img
@@ -123,7 +119,7 @@ $ rm big.img
 $ echo secret > s.txt
 
 $ chmod 600 s.txt ; ls -l s.txt
--rw-------. 1 moiseid moiseid 7 Oct 17 23:13 s.txt
+-rw------- 1 moiseid moiseid 7 Oct 25 19:21 s.txt
 
 $ chmod 000 s.txt ; cat s.txt
 cat: s.txt: Permission denied
@@ -133,8 +129,8 @@ secret
 
 $ umask ; touch new.txt ; mkdir newdir ; ls -ld new.txt newdir
 0022
--rw-r--r--. 1 moiseid moiseid 0 Oct 17 23:13 new.txt
-drwxr-xr-x. 1 moiseid moiseid 0 Oct 17 23:13 newdir
+-rw-r--r-- 1 moiseid moiseid 0 Oct 25 19:21 new.txt
+drwxr-xr-x 1 moiseid moiseid 0 Oct 25 19:21 newdir
 
 $ mkdir box ; echo hi > box/f
 
@@ -149,92 +145,69 @@ hi
 $ chmod 755 box
 
 $ ls -l /usr/bin/passwd ; ls -ld /tmp
--rwsr-xr-x. 1 nobody nobody 91424 Apr 29 03:00 /usr/bin/passwd
-drwxrwxrwt. 81 nobody nobody 19760 Oct 17 23:13 /tmp
+-rwsr-xr-x 1 root root 88984 Jul 31 22:01 /usr/bin/passwd
+drwxrwxrwt 48 root root 1020 Oct 25 19:20 /tmp
 
 $ cat /etc/shadow
 cat: /etc/shadow: Permission denied
 
 $ ls -l /etc/shadow
-----------. 1 nobody nobody 1492 Sep 28 14:36 /etc/shadow
+-rw------- 1 root root 1202 Oct 25 12:29 /etc/shadow
 
 ===== Part 4 - Disks and the kernel as files =====
 
 $ lsblk -o NAME,MAJ:MIN,RM,SIZE,RO,TYPE,FSTYPE,MOUNTPOINTS
-NAME        MAJ:MIN RM   SIZE RO TYPE FSTYPE   MOUNTPOINTS
-loop0         7:0    0  55.5M  1 loop squashfs /var/lib/snapd/snap/core18/2999
-loop1         7:1    0     4K  1 loop squashfs /var/lib/snapd/snap/bare/5
-loop2         7:2    0  55.5M  1 loop squashfs /var/lib/snapd/snap/core18/3084
-loop3         7:3    0  63.8M  1 loop squashfs /var/lib/snapd/snap/core20/2866
-loop4         7:4    0  63.8M  1 loop squashfs /var/lib/snapd/snap/core20/2922
-loop5         7:5    0  73.9M  1 loop squashfs /var/lib/snapd/snap/core22/2216
-loop6         7:6    0    74M  1 loop squashfs /var/lib/snapd/snap/core22/2292
-loop7         7:7    0  66.8M  1 loop squashfs /var/lib/snapd/snap/core24/1643
-loop8         7:8    0  66.8M  1 loop squashfs /var/lib/snapd/snap/core24/2124
-loop9         7:9    0 349.7M  1 loop squashfs /var/lib/snapd/snap/gnome-3-38-2004/143
-loop10        7:10   0 531.5M  1 loop squashfs /var/lib/snapd/snap/gnome-42-2204/263
-loop11        7:11   0 606.1M  1 loop squashfs /var/lib/snapd/snap/gnome-46-2404/153
-loop12        7:12   0  91.7M  1 loop squashfs /var/lib/snapd/snap/gtk-common-themes/1535
-loop13        7:13   0   395M  1 loop squashfs /var/lib/snapd/snap/mesa-2404/1165
-loop14        7:14   0   402M  1 loop squashfs /var/lib/snapd/snap/mesa-2404/1839
-loop15        7:15   0 110.6M  1 loop squashfs /var/lib/snapd/snap/obsidian/68
-loop16        7:16   0 112.2M  1 loop squashfs /var/lib/snapd/snap/obsidian/69
-loop17        7:17   0 174.2M  1 loop squashfs /var/lib/snapd/snap/postman/358
-loop18        7:18   0 174.4M  1 loop squashfs /var/lib/snapd/snap/postman/360
-loop19        7:19   0 468.3M  1 loop squashfs /var/lib/snapd/snap/processing/27
-loop20        7:20   0 469.7M  1 loop squashfs /var/lib/snapd/snap/processing/39
-loop21        7:21   0  50.3M  1 loop squashfs /var/lib/snapd/snap/snapd/27738
-loop22        7:22   0  44.7M  1 loop squashfs /var/lib/snapd/snap/snapd/28254
-loop23        7:23   0 175.2M  1 loop squashfs /var/lib/snapd/snap/spotify/96
-loop24        7:24   0 143.8M  1 loop squashfs /var/lib/snapd/snap/spotify/99
-zram0       251:0    0  14.8G  0 disk swap     [SWAP]
-nvme0n1     259:0    0 953.9G  0 disk          
-|-nvme0n1p1 259:1    0   200M  0 part vfat     /boot/efi
-|-nvme0n1p2 259:2    0    16M  0 part          
-|-nvme0n1p3 259:3    0 716.3G  0 part ntfs     
-|-nvme0n1p4 259:4    0   889M  0 part ntfs     
-|-nvme0n1p5 259:5    0     1G  0 part ext4     /boot
-`-nvme0n1p6 259:6    0 234.8G  0 part btrfs    /home/moiseid/.codex/visualizations/2026/10/17/01a14b7b-6b52-7e13-bf9b-7fc971c7d209
-                                               /home/moiseid/University/SO/os-2026-DanielMoisei/.git
-                                               /home/moiseid/University/SO/os-2026-DanielMoisei
-                                               /home
-                                               /
+NAME        MAJ:MIN RM   SIZE RO TYPE FSTYPE MOUNTPOINTS
+zram0       253:0    0  14.8G  0 disk swap   [SWAP]
+nvme0n1     259:0    0 953.9G  0 disk        
+|-nvme0n1p1 259:1    0   200M  0 part vfat   
+|-nvme0n1p2 259:2    0    16M  0 part        
+|-nvme0n1p3 259:3    0 491.3G  0 part ntfs   
+|-nvme0n1p4 259:4    0   889M  0 part ntfs   
+|-nvme0n1p5 259:5    0     4G  0 part vfat   /boot
+`-nvme0n1p6 259:6    0 457.4G  0 part btrfs  /var/tmp
+                                             /var/cache
+                                             /var/log
+                                             /srv
+                                             /home
+                                             /root
+                                             /
 
 $ df -hT /
 Filesystem     Type   Size  Used Avail Use% Mounted on
-/dev/nvme0n1p6 btrfs  235G   79G  154G  34% /
+/dev/nvme0n1p6 btrfs  458G   63G  395G  14% /
 
 $ mount | grep ' / '
-/dev/nvme0n1p6 on / type btrfs (ro,nosuid,nodev,relatime,seclabel,compress=zstd:1,ssd,discard=async,space_cache=v2,subvolid=256,subvol=/root)
+/dev/nvme0n1p6 on / type btrfs (rw,noatime,compress=zstd:1,ssd,discard=async,space_cache=v2,subvolid=256,subvol=/@)
 
 $ grep -c processor /proc/cpuinfo
 16
 
 $ head -3 /proc/meminfo
-MemTotal:       15560404 kB
-MemFree:          175208 kB
-MemAvailable:    5316592 kB
+MemTotal:       15566504 kB
+MemFree:         1066900 kB
+MemAvailable:    8327524 kB
 
 $ head -5 /proc/self/status
 Name:	head
 Umask:	0022
 State:	R (running)
-Tgid:	88
+Tgid:	89266
 Ngid:	0
 
 $ ls -l /proc/self/fd
 total 0
-lr-x------. 1 moiseid moiseid 64 Oct 17 23:13 0 -> /dev/null
-l-wx------. 1 moiseid moiseid 64 Oct 17 23:13 1 -> pipe:[848785]
-l-wx------. 1 moiseid moiseid 64 Oct 17 23:13 2 -> pipe:[848785]
-lr-x------. 1 moiseid moiseid 64 Oct 17 23:13 3 -> /proc/89/fd
+lr-x------ 1 moiseid moiseid 64 Oct 25 19:21 0 -> /dev/null
+l-wx------ 1 moiseid moiseid 64 Oct 25 19:21 1 -> /home/moiseid/University/SO/os-2026-DanielMoisei/lab5/experiment-output.txt
+l-wx------ 1 moiseid moiseid 64 Oct 25 19:21 2 -> /home/moiseid/University/SO/os-2026-DanielMoisei/lab5/experiment-output.txt
+lr-x------ 1 moiseid moiseid 64 Oct 25 19:21 3 -> /proc/89267/fd
 
 ===== Stretch - Magic numbers =====
 
 $ gzip -c /etc/passwd > compressed-notes.txt
 
 $ file compressed-notes.txt
-compressed-notes.txt: gzip compressed data, was "passwd", last modified: Mon Sep 28 11:36:18 2026, from Unix, original size modulo 2^32 3569
+compressed-notes.txt: gzip compressed data, was "passwd", last modified: Sun Oct 25 10:29:30 2026, from Unix, original size modulo 2^32 2599
 
 $ od -An -tx1 -N16 compressed-notes.txt
- 1f 8b 08 08 32 51 ba 6a 00 03 70 61 73 73 77 64
+ 1f 8b 08 08 0a da dd 6a 00 03 70 61 73 73 77 64
