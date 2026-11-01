@@ -1,0 +1,188 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab8_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.6]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 8\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: The Same Calls, Inside Your Own OS (xv6)\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to run inside xv6 the same system calls that were used on Linux in Laboratory Work 7. The program \texttt{run} performs \texttt{fork}, \texttt{exec} and \texttt{wait} in xv6, and \texttt{pingpong} makes two processes exchange a byte through two pipes. As an optional extension, \texttt{primes} builds a prime sieve from a chain of processes connected by pipes. All programs were added to \texttt{UPROGS} in the \texttt{Makefile} and executed in QEMU.
+
+\newpage
+\section{run, inside xv6}
+
+\subsection{The program}
+
+The program \texttt{user/run.c} repeats the three steps of the shell for the command \inlinecmd{echo hello from the child}. There is no libc here, only the system calls of the kernel: the child becomes \texttt{echo} with \texttt{exec}, and the parent collects it with \texttt{wait}. A tab-indented \texttt{\$U/\_run\textbackslash} line was added to \texttt{UPROGS}.
+
+\lstinputlisting[language=C,caption={Implementation of user/run.c}]{../run.c}
+
+The output has the same line order as in Laboratory Work 7 (Figure~\ref{fig:run-echo}).
+
+\taskfigure{part1-run-echo.png}{run in xv6: the child becomes echo}{run-echo}
+
+\subsection{Other programs in the child}
+
+With \inlinecmd{char *args[] = { "ls", 0 }; exec("ls", args);} the child prints the xv6 directory listing in the format \textit{name, type, inode, size} (Figure~\ref{fig:run-ls}). The list also contains the programs added in the previous laboratories and this one (\texttt{mystat}, \texttt{find}, \texttt{zombie}, \texttt{run}, \texttt{pingpong}, \texttt{primes}) and ends with the device \texttt{console} (type 3). With \inlinecmd{exec("nosuchprog", args);} the exec fails, the child prints \texttt{exec failed} and exits with status 1 (Figure~\ref{fig:run-nosuch}).
+
+\taskfigure{part1-run-ls.png}{The child becomes ls}{run-ls}
+\taskfigure{part1-run-nosuch.png}{Failed exec: status 1}{run-nosuch}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item In xv6 the calls are \texttt{fork}, \texttt{exec}, \texttt{wait}; on Linux they were \texttt{fork}, \texttt{execlp}, \texttt{waitpid}. They are the same three steps: copy the process, replace the child's program, collect the child's status. \texttt{execlp} and \texttt{waitpid} are libc variants of the same kernel operations, so only the library around them differs.
+  \item \texttt{echo} prints it. After a successful \texttt{exec} the child's code is replaced by \texttt{echo}; \texttt{run} printed only the \texttt{pid} lines.
+  \item The status is the value passed to \texttt{exit} after the failed exec: \texttt{exit(1)} in the xv6 program and \texttt{exit(127)} in the Linux one. 127 is the shell convention for ``command not found''; 1 is a generic failure.
+\end{enumerate}
+
+\newpage
+\section{pingpong}
+
+\subsection{The program}
+
+The parent writes one byte into the first pipe (\texttt{p2c}); the child reads it, prints \texttt{received ping} with its own pid, writes the byte into the second pipe (\texttt{c2p}) and exits. The parent reads the answer, prints \texttt{received pong} and waits for the child. Each process closes the pipe ends it does not use.
+
+\lstinputlisting[language=C,caption={Implementation of user/pingpong.c}]{../pingpong.c}
+
+The line with \texttt{ping} comes first and is printed by the child, as required (Figure~\ref{fig:pingpong}). The pids (4 and 3 here) differ from the example in the laboratory text (10 and 9) only because they depend on how many processes xv6 has created since boot; the order of the two lines is the same.
+
+\taskfigure{part2-pingpong.png}{pingpong in xv6}{pingpong}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item A pipe is one-directional. With a single pipe both processes would hold both ends, and the parent could read back the byte it had just written before the child received it. Two pipes give each direction its own channel.
+  \item The call \inlinecmd{read(c2p[0], &b, 1)} in the parent: reading an empty pipe blocks until the child writes the pong. The final \texttt{wait(0)} then collects the child.
+\end{enumerate}
+
+\newpage
+\section{Optional: primes}
+
+\subsection{The program}
+
+The program \texttt{user/primes.c} prints the primes from 2 to 35. The first process feeds the numbers into a pipe; each stage reads its first number $p$, prints \texttt{prime $p$}, creates a pipe and a child, and forwards only the numbers not divisible by $p$. Every pipe end that is not used is closed, otherwise the processes would run out of descriptors (Figure~\ref{fig:primes}).
+
+\lstinputlisting[language=C,caption={Implementation of user/primes.c}]{../primes.c}
+
+\taskfigure{stretch-primes.png}{Primes from 2 to 35 in xv6}{primes}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+The laboratory work showed that xv6 provides the same process and pipe calls that were used on Linux in Laboratory Work 7: \texttt{fork}, \texttt{exec}, \texttt{wait} and \texttt{pipe}. Only the C library around them is different, because xv6 has no glibc and the programs call the kernel directly. The program \texttt{run} reproduced the three steps of the shell: \texttt{fork} created the child, \texttt{exec} replaced it with \texttt{echo} or \texttt{ls}, and \texttt{wait} returned its status to the parent. The text \texttt{hello from the child} was printed by \texttt{echo}, not by \texttt{run}, because a successful \texttt{exec} replaces the code of the calling process.
+
+A failed \texttt{exec} returns to the caller, so the child printed \texttt{exec failed} and exited. The status seen by the parent was 1 in xv6 and 127 on Linux only because each program passed a different value to \texttt{exit}; the kernel simply forwards the chosen value.
+
+The program \texttt{pingpong} showed how two processes communicate. A pipe is one-directional, so two pipes were needed, one for each direction, and each process closed the ends it did not use. The blocking \texttt{read} was enough to synchronize the parent with the child: the parent could not print \texttt{received pong} before the child had written its answer. The optional \texttt{primes} program extended the same idea to a chain of processes and confirmed that closing every unused pipe end is mandatory, otherwise the processes run out of descriptors and the readers never see end-of-file.
+
+All three programs compiled with the xv6 \texttt{Makefile}, were included in the file-system image through \texttt{UPROGS}, and were verified in QEMU, with the output shown in the figures above.
+
+\end{document}

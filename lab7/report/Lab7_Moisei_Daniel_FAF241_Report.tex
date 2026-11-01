@@ -1,0 +1,246 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab7_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][0.82\textwidth]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=#1,height=0.80\textheight,keepaspectratio]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 7\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Three Small Programs: Processes, Redirection, a Pipe\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to run, on a real Linux system, the three mechanisms behind every shell command: process creation with \texttt{fork}, \texttt{exec} and \texttt{wait}; output redirection by manipulating file descriptors; and a pipe connecting two programs. Four short C programs were compiled with \texttt{gcc -Wall -Wextra}, executed, modified in one line, and the resulting behaviour was observed and explained.
+
+\newpage
+\section{fork + exec + wait}
+
+\subsection{The program}
+
+The program \texttt{run.c} does what the shell does for \inlinecmd{ls -l}: \texttt{fork} copies the process, the child calls \texttt{execlp} to become \texttt{ls}, and the parent calls \texttt{waitpid} and prints the child's exit status.
+
+\lstinputlisting[language=C,caption={Implementation of run.c}]{../run.c}
+
+The output keeps the required order: the parent PID, the child PID with the parent PID, the listing produced by \texttt{ls}, and finally the status line (Figure~\ref{fig:run-ls}).
+
+\taskfigure[0.80\textwidth]{part1-run-ls.png}{Compilation and execution of run.c with ls -l}{run-ls}
+
+\subsection{Other programs in the child}
+
+Replacing the \texttt{execlp} line with \inlinecmd{execlp("date", "date", (char *)NULL)} makes the child print the current date and end with status 0 (Figure~\ref{fig:run-date}). With \inlinecmd{execlp("nosuchprog", "nosuchprog", (char *)NULL)} the exec fails, \texttt{perror} prints the message, and the child exits with 127 (Figure~\ref{fig:run-nosuch}).
+
+\taskfigure[0.80\textwidth]{part1-run-date.png}{The child becomes date}{run-date}
+\taskfigure[0.80\textwidth]{part1-run-nosuch.png}{Failed exec: status 127}{run-nosuch}
+
+\subsection{Differences from the expected output}
+
+The values in the figures differ from the example in the laboratory text, which is expected: the PIDs depend on how many processes the system has already started, and the directory listing depends on the files present in \texttt{\~{}/os-lab7} (here the four source files, the compiled \texttt{run}, and the owner \texttt{moiseid} instead of \texttt{root}). The date shows the \texttt{EET} time zone of the laptop. None of this changes the order of the lines, which is the only thing that matters.
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item \texttt{perror("exec")} is printed only with \texttt{nosuchprog}. When \texttt{execlp} succeeds, the child's code is replaced by the new program, so the next line never runs. \texttt{execlp} returns only on failure, which happens when the program is not found in \texttt{PATH}.
+  \item The child prints the PID of the parent process, i.e.\ the value printed on the first line by the original process.
+  \item With \texttt{ls} the parent sees status 0; with \texttt{nosuchprog} it sees 127, the value passed to \texttt{exit} by the child after the failed exec.
+\end{enumerate}
+
+\newpage
+\section{A zombie, on purpose}
+
+\subsection{Creating the zombie}
+
+The file \texttt{zombie.c} is a copy of \texttt{run.c} with one added line, \inlinecmd{sleep(20);}, placed just before \texttt{waitpid}. The child runs \texttt{ls} and terminates immediately, but the parent does not collect its status for 20 seconds.
+
+\begin{lstlisting}[language=C]
+    int status;
+    sleep(20);                                  /* the new line */
+    waitpid(pid, &status, 0);                   /* step 3: wait for the child */
+\end{lstlisting}
+
+While the parent sleeps, \inlinecmd{ps -o pid,ppid,stat,cmd} shows the child with state \texttt{ZN} (see the note below) and the text \texttt{<defunct>} (Figure~\ref{fig:zombie-ps}). After the parent wakes up, calls \texttt{waitpid} and ends, the entry disappears (Figure~\ref{fig:zombie-gone}).
+
+\taskfigure[0.85\textwidth]{part2-zombie-ps.png}{The terminated ls child as a zombie}{zombie-ps}
+\taskfigure[0.85\textwidth]{part2-zombie-gone.png}{The zombie is gone after the parent called waitpid}{zombie-gone}
+
+\subsection{Differences from the expected output}
+
+Two things differ from the example in the laboratory text. First, \texttt{ps} without a selection lists every process attached to my terminal, so the figure also contains several \texttt{zsh} processes and a background helper of my shell prompt, not only \texttt{./zombie}, \texttt{[ls]} and \texttt{ps}; the relevant lines are the \texttt{./zombie} parent and its \texttt{[ls] <defunct>} child, whose PPID equals the PID of \texttt{./zombie}. Second, the STAT column shows \texttt{SN}, \texttt{ZN} and \texttt{S<s} instead of plain \texttt{S} and \texttt{Z}. The first letter is the state (\texttt{S} sleeping, \texttt{Z} zombie, \texttt{R} running); the extra characters are modifiers: \texttt{N} means low priority (positive nice value), \texttt{<} high priority, \texttt{s} session leader, \texttt{l} multi-threaded and \texttt{+} foreground process group. They come from the scheduling setup of this desktop session, not from the program, and they do not change the meaning of the first letter. Also, in the shell the job message \texttt{[1]+ done ./zombie > /dev/null} appeared after 20 seconds, which confirms that the parent ended after \texttt{waitpid}.
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item \texttt{ls} has the letter \texttt{Z} in the STAT column (shown as \texttt{ZN} in Figure~\ref{fig:zombie-ps}): zombie. The child has terminated, but its parent has not yet read its exit status with \texttt{wait}, so the kernel keeps its process-table entry.
+  \item After 20 seconds the \texttt{[ls] <defunct>} line is gone. The line \inlinecmd{waitpid(pid, &status, 0);} collected the status, which allowed the kernel to free the entry.
+\end{enumerate}
+
+\newpage
+\section{Redirection: ls -l > out.txt}
+
+\subsection{The program}
+
+In the child, \texttt{redirect.c} closes descriptor 1 and opens \texttt{out.txt}; \texttt{open} returns the smallest free number, which is 1. Descriptors survive \texttt{exec}, so \texttt{ls}, which writes to descriptor 1 as always, writes into the file.
+
+\lstinputlisting[language=C,caption={Implementation of redirect.c}]{../redirect.c}
+
+The message \texttt{open gave descriptor 1} is printed on the standard error, which was not redirected, and the listing is found in \texttt{out.txt} (Figure~\ref{fig:redirect}).
+
+\taskfigure[0.85\textwidth]{part3-redirect.png}{Execution of redirect.c and the beginning of out.txt}{redirect}
+
+\subsection{Differences from the expected output}
+
+The example in the laboratory text shows \texttt{root} as the owner and its own file sizes and dates; mine shows the user \texttt{moiseid} and the files present in my directory (\texttt{head -3} prints the \texttt{total} line, then the first two entries in alphabetical order: \texttt{out.txt} and \texttt{pipeline3.c}). The size of \texttt{out.txt} is 0 in the listing because the file was created by \texttt{open} before \texttt{ls} had written anything, so \texttt{ls} saw it empty.
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item \texttt{open} gave descriptor 1. A new descriptor receives the smallest free number; descriptors 0 and 2 were in use and 1 had just been closed.
+  \item \texttt{ls} still writes to descriptor 1, but that descriptor now refers to \texttt{out.txt}, not to the terminal. The kernel preserves it across \texttt{exec}.
+  \item To redirect the errors, as with \texttt{2> err.txt}, descriptor 2 would be closed before \texttt{open}.
+\end{enumerate}
+
+\newpage
+\section{A pipe: ls /etc | wc -l}
+
+\subsection{The program}
+
+The program \texttt{pipeline.c} creates one pipe and two children. In the first child, descriptor 1 becomes the writing end \texttt{p[1]}; in the second, descriptor 0 becomes the reading end \texttt{p[0]}. All unused ends are closed in every process.
+
+\lstinputlisting[language=C,caption={Implementation of pipeline.c}]{../pipeline.c}
+
+The count printed by the program is equal to the one printed by the real shell pipeline (Figure~\ref{fig:pipeline}).
+
+\taskfigure[0.80\textwidth]{part4-pipeline.png}{The hand-built pipeline compared with the shell}{pipeline}
+
+\subsection{Breaking it on purpose}
+
+When the line \inlinecmd{close(p[1]);} in the parent is turned into a comment, the program no longer ends. Running it in the background and inspecting the process table shows that \texttt{pipeline\_broken} and its child \texttt{wc -l} are still alive, sleeping, state \texttt{SN} (Figure~\ref{fig:pipeline-hang}); \texttt{ls} has already finished and has been collected by the first \texttt{wait}.
+
+\taskfigure[0.80\textwidth]{part4-hang.png}{wc waits forever when the parent keeps p[1] open}{pipeline-hang}
+
+\subsection{Optional: three stages}
+
+The program \texttt{pipeline3.c} implements \inlinecmd{ls /usr/bin | grep x | wc -l} with two pipes and three children. Every child closes all four pipe ends after its \texttt{dup}, and so does the parent. Its result equals the shell's (Figure~\ref{fig:pipeline3}).
+
+\taskfigure[0.80\textwidth]{stretch-pipeline3.png}{Three-stage pipeline compared with the shell}{pipeline3}
+
+\subsection{Differences from the expected output}
+
+The numbers 227 and 398 are specific to this laptop (the number of entries in \texttt{/etc} and of \texttt{/usr/bin} names containing \texttt{x}); only their equality with the shell result matters. In the hanging experiment the figure shows only the parent and \texttt{wc -l}: \texttt{ls} is not listed because it had already ended and was collected by the first \texttt{wait}. Because the program was started in the background with \texttt{\&} to be inspected with \texttt{ps}, it was stopped afterwards with \texttt{pkill} instead of Ctrl-C; the effect is the same.
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item Yes, \texttt{./pipeline} and \inlinecmd{ls /etc | wc -l} printed the same number.
+  \item After the change, \texttt{wc} never ends. \texttt{ls} terminates normally.
+  \item \texttt{wc} waits for end-of-file on its input, and end-of-file arrives only when every copy of the write end of the pipe is closed; the parent still holds \texttt{p[1]}, so \texttt{read} blocks forever.
+\end{enumerate}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+The laboratory work showed that the shell's behaviour is built from a few system calls. \texttt{fork} + \texttt{exec} + \texttt{wait} create and collect a process, and a child that is not collected stays as a zombie. Because \texttt{open} and \texttt{dup} always return the smallest free descriptor, closing descriptor 1 or 0 first is enough to redirect a program that was never modified, and the same idea connects two programs through a pipe. The hanging experiment showed that every unused pipe end must be closed, otherwise the reader never sees end-of-file.
+
+\end{document}
