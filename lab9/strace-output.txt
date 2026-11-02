@@ -1,0 +1,183 @@
+### Part 1: strace -f -e trace=openat,read,write,close ls -l
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/libcap.so.2", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\200\212\0\0\0\0\0\0"..., 1024) = 1024
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\177\2\0\0\0\0\0"..., 1024) = 1024
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/share/locale/locale.alias", O_RDONLY|O_CLOEXEC) = 3
+read(3, "# Locale name alias data base.\n#"..., 4096) = 2998
+read(3, "", 4096)                       = 0
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/share/locale/en_US.UTF-8/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en_US.utf8/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en_US/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en.UTF-8/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en.utf8/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en/LC_TIME/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, ".", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+openat(AT_FDCWD, "/etc/nsswitch.conf", O_RDONLY|O_CLOEXEC) = 4
+read(4, "# Name Service Switch configurat"..., 4096) = 359
+read(4, "", 4096)                       = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/etc/passwd", O_RDONLY|O_CLOEXEC) = 4
+read(4, "root:x:0:0::/root:/usr/bin/bash\n"..., 4096) = 2599
+close(4)                                = 0
+openat(AT_FDCWD, "/etc/group", O_RDONLY|O_CLOEXEC) = 4
+read(4, "root:x:0:root\nsys:x:3:bin,moisei"..., 4096) = 1282
+close(4)                                = 0
+openat(AT_FDCWD, "/usr/lib/libnss_systemd.so.2", O_RDONLY|O_CLOEXEC) = 4
+read(4, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 1024) = 1024
+close(4)                                = 0
+openat(AT_FDCWD, "/usr/lib/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = 4
+read(4, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 1024) = 1024
+close(4)                                = 0
+openat(AT_FDCWD, "/run/systemd/userdb/", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 4
+close(5)                                = 0
+openat(4, "io.systemd.DynamicUser", O_RDONLY|O_CLOEXEC|O_PATH) = 5
+close(5)                                = 0
+openat(4, "io.systemd.DropIn", O_RDONLY|O_CLOEXEC|O_PATH) = 5
+close(5)                                = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/proc/sys/kernel/random/boot_id", O_RDONLY|O_NOCTTY|O_CLOEXEC) = 4
+read(4, "b6031d20-3baa-4464-b2a0-9ab994a9"..., 38) = 37
+read(4, "", 1)                          = 0
+close(4)                                = 0
+close(5)                                = 0
+close(6)                                = 0
+close(7)                                = 0
+openat(AT_FDCWD, "/etc/group", O_RDONLY|O_CLOEXEC) = 4
+read(4, "root:x:0:root\nsys:x:3:bin,moisei"..., 4096) = 1282
+close(4)                                = 0
+openat(AT_FDCWD, "/run/systemd/userdb/", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 4
+close(4)                                = 0
+close(5)                                = 0
+close(8)                                = 0
+close(6)                                = 0
+close(7)                                = 0
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/share/locale/en_US.UTF-8/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en_US.utf8/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en_US/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en.UTF-8/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en.utf8/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/share/locale/en/LC_MESSAGES/coreutils.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/localtime", O_RDONLY|O_CLOEXEC) = 3
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\20\0\0\0\20\0\0\0\0"..., 4096) = 2424
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\20\0\0\0\20\0\0\0\0"..., 4096) = 1509
+close(3)                                = 0
+write(1, "total 24\n-rw-r--r-- 1 moiseid mo"..., 305total 24
+-rw-r--r-- 1 moiseid moiseid  332 Nov  2 18:05 README.md
+-rw-r--r-- 1 moiseid moiseid 4615 Nov  2 18:07 report.md
+-rwxr-xr-x 1 moiseid moiseid  981 Nov  2 18:04 run_lab9.sh
+-rw-r--r-- 1 moiseid moiseid 3843 Nov  2 18:08 strace-output.txt
+-rw-r--r-- 1 moiseid moiseid 1054 Nov  2 18:04 syscalls.c
+) = 305
+close(1)                                = 0
+close(2)                                = 0
++++ exited with 0 +++
+
+### Part 1: number of system calls made by ls -l
+268
+
+### Part 2: gcc -Wall -Wextra -o syscalls syscalls.c && ./syscalls
+open returned descriptor 3
+write sent 14 bytes
+read got 14 bytes: hello, kernel
+
+### Part 2: strace -e trace=openat,write,read,close ./syscalls
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\177\2\0\0\0\0\0"..., 1024) = 1024
+close(3)                                = 0
+openat(AT_FDCWD, "note.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3
+write(3, "hello, kernel\n", 14)         = 14
+close(3)                                = 0
+openat(AT_FDCWD, "note.txt", O_RDONLY)  = 3
+read(3, "hello, kernel\n", 63)          = 14
+close(3)                                = 0
+write(1, "open returned descriptor 3\nwrite"..., 80open returned descriptor 3
+write sent 14 bytes
+read got 14 bytes: hello, kernel
+) = 80
++++ exited with 0 +++
+
+### Part 3: strace -c ./syscalls
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 27.63    0.000155         155         1           execve
+ 15.69    0.000088          11         8           mmap
+ 14.08    0.000079          19         4           openat
+ 11.59    0.000065          16         4           close
+  6.06    0.000034          11         3           mprotect
+  4.63    0.000026          13         2           write
+  3.92    0.000022           7         3           brk
+  2.85    0.000016           5         3           fstat
+  2.50    0.000014           7         2           newfstatat
+  2.32    0.000013           6         2           read
+  2.32    0.000013           6         2           getrandom
+  1.07    0.000006           6         1         1 ioctl
+  1.07    0.000006           6         1           set_tid_address
+  1.07    0.000006           6         1           prlimit64
+  0.89    0.000005           5         1           arch_prctl
+  0.89    0.000005           5         1           set_robust_list
+  0.89    0.000005           5         1           rseq
+  0.53    0.000003           3         1         1 access
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.000561          13        41         2 total
+
+### Part 3: strace -c ls -l
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 13.52    0.000129           4        30        12 openat
+ 10.06    0.000096           3        28           close
+  9.12    0.000087           3        24           mmap
+  6.08    0.000058           3        17           epoll_ctl
+  5.56    0.000053           2        21           fstat
+  4.72    0.000045           3        15           read
+  4.30    0.000041           2        14           epoll_pwait2
+  3.56    0.000034           4         7           llistxattr
+  3.35    0.000032          16         2         1 getxattr
+  3.35    0.000032           5         6           getdents64
+  3.14    0.000030          10         3           connect
+  2.94    0.000028           7         4           socket
+  2.52    0.000024           2         9           newfstatat
+  2.52    0.000024           3         7           statx
+  2.41    0.000023           5         4           fsetxattr
+  2.31    0.000022           3         6         3 recvfrom
+  2.10    0.000020           2         8           fcntl
+  1.99    0.000019           2         8           lseek
+  1.89    0.000018           3         6           brk
+  1.89    0.000018           4         4         4 fgetxattr
+  1.68    0.000016           2         6           mprotect
+  1.57    0.000015           2         6           rt_sigprocmask
+  1.57    0.000015           5         3           sendto
+  1.26    0.000012           3         4           timerfd_settime
+  1.15    0.000011           2         4           futex
+  0.94    0.000009           3         3           getsockopt
+  0.94    0.000009           4         2           epoll_create1
+  0.84    0.000008           8         1           munmap
+  0.84    0.000008           4         2           timerfd_create
+  0.63    0.000006           3         2         2 ioctl
+  0.42    0.000004           4         1           epoll_wait
+  0.31    0.000003           3         1           getpid
+  0.31    0.000003           1         3           getrandom
+  0.21    0.000002           2         1           write
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         6         4 prctl
+  0.00    0.000000           0         1           arch_prctl
+  0.00    0.000000           0         1           set_tid_address
+  0.00    0.000000           0         1           set_robust_list
+  0.00    0.000000           0         1           prlimit64
+  0.00    0.000000           0         1           rseq
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.000954           3       275        27 total
+
+### Part 3: calls to write made by ls -l
+1
