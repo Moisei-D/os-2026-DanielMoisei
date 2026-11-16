@@ -1,0 +1,244 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab12_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 12\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Producer, Consumer and the Other Tools\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+In Laboratory Work 11 one semaphore was used at a time: as a lock, as a signal and as a counter. The purpose of this laboratory work was to make the synchronization tools work together. Two classic problems of operating systems were solved: producer and consumer, and readers and writers. The condition variable was introduced as another way to wait for an event, and a deadlock was built on purpose and then removed.
+
+All the programs were compiled with \inlinecmd{gcc -Wall -pthread}. For the questions that ask to change a line and run again, a modified copy of the program was created with \texttt{sed}, so that the submitted files stay unchanged.
+
+\newpage
+\section{Producer and Consumer}
+
+\subsection{The program}
+
+A fast producer puts 8 items into a buffer of 4 slots, and a slow consumer takes them out. Three tools work together: the semaphore \texttt{empty} counts the free slots (it starts at 4), the semaphore \texttt{full} counts the filled slots (it starts at 0), and a mutex protects the buffer itself.
+
+\lstinputlisting[language=C,caption={Implementation of prodcons.c}]{../prodcons.c}
+
+\taskfigure{part1-prodcons.png}{The producer fills the buffer, then follows the slow consumer}{prodcons}
+
+The producer filled the 4 slots at once and then had to wait: after that, it put one new item after each item the consumer took, so the buffer never held more than 4 items (Figure~\ref{fig:prodcons}).
+
+\subsection{Locking the mutex before sem\_wait}
+
+For the third question, the first two lines of the loop in \texttt{producer()} were swapped in a copy, \texttt{prodcons\_swap.c}, so that the mutex is locked before \texttt{sem\_wait(\&empty)}. The program stopped after the buffer was full and had to be stopped with Ctrl-C (Figure~\ref{fig:prodcons-swap}).
+
+\taskfigure{part1-prodcons-swap.png}{The mutex locked before sem\_wait: the program stops}{prodcons-swap}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item The call \texttt{sem\_wait(\&empty)} stops the producer. \texttt{empty} starts at 4 and every \texttt{put} takes one unit, so after 4 items it is 0 and the next \texttt{sem\_wait(\&empty)} blocks until the consumer frees a slot with \texttt{sem\_post(\&empty)}.
+  \item At the start the \textbf{consumer} waits, in \texttt{sem\_wait(\&full)}: \texttt{full} starts at 0 because the buffer is empty, so the consumer blocks until the producer has put the first item and called \texttt{sem\_post(\&full)}.
+  \item When the buffer is full, the producer locks the mutex and then sleeps in \texttt{sem\_wait(\&empty)} \textbf{while holding the mutex}. To free a slot the consumer must first lock the same mutex, so it blocks in \texttt{pthread\_mutex\_lock}. The producer waits for the consumer to free a slot, and the consumer waits for the producer to release the mutex: neither can continue. This is a deadlock; a thread must never sleep on a semaphore while holding a mutex that the other side needs.
+\end{enumerate}
+
+\newpage
+\section{The Condition Variable}
+
+\subsection{The program}
+
+The problem of \texttt{order.c} from Laboratory Work 11 is solved here in another way. The state is an ordinary variable, \texttt{ready}, protected by a mutex. The condition variable \texttt{changed} is only the place where B sleeps until A says that something has changed. \texttt{pthread\_cond\_wait} releases the mutex, sleeps, and takes the mutex again before it returns.
+
+\lstinputlisting[language=C,caption={Implementation of condvar.c}]{../condvar.c}
+
+\taskfigure{part2-condvar.png}{B sleeps until A has written the message}{condvar}
+
+\subsection{if instead of while}
+
+For the second question, \texttt{while (!ready)} was replaced by \texttt{if (!ready)} in a copy, \texttt{condvar\_if.c}. The output was the same (Figure~\ref{fig:condvar-if}).
+
+\taskfigure{part2-condvar-if.png}{With if instead of while}{condvar-if}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item The ordinary variable \texttt{ready}, protected by the mutex \texttt{lock}, remembers that the message is ready. The condition variable remembers nothing: a \texttt{pthread\_cond\_signal} sent when nobody is waiting is simply lost, which is why B checks \texttt{ready} itself.
+  \item Yes, with \texttt{if} it still works here, because there is only one writer, it sets \texttt{ready = 1} before signalling, and nothing sets \texttt{ready} back to 0.
+  \item A thread can wake up and still find \texttt{ready == 0}. POSIX allows \textbf{spurious wakeups}: \texttt{pthread\_cond\_wait} may return even when nobody signalled. Also, with several waiting threads, another thread can take the mutex first and consume the event before the woken thread runs. With \texttt{while} the condition is checked again after every wakeup.
+\end{enumerate}
+
+\newpage
+\section{Readers and Writers}
+
+\subsection{The program}
+
+Many readers may read at the same time, but a writer must be alone. The semaphore \texttt{room} (1 = free for a writer) is taken by the first reader that enters and released by the last reader that leaves; the semaphore \texttt{rlock} protects the counter \texttt{readers}.
+
+\lstinputlisting[language=C,caption={Implementation of readers.c}]{../readers.c}
+
+The three readers were inside at the same time, while each writer was alone (Figure~\ref{fig:readers}).
+
+\taskfigure{part3-readers.png}{Three readers together, each writer alone}{readers}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item The two lines are \inlinecmd{if (++readers == 1) sem_wait(&room);} and \inlinecmd{if (--readers == 0) sem_post(&room);}. Only the first reader takes \texttt{room}, for the whole group, so the following readers enter without waiting for it; only the last reader gives it back. A writer takes \texttt{room} itself, so it can enter only when no reader and no other writer is inside.
+  \item \texttt{++readers} and \texttt{--readers} are load, add and store, like \texttt{counter++} in Laboratory Work 11. Without \texttt{rlock}, two readers that arrive together could both read 0 and both store 1, so both would believe they are the first, and the count would be wrong. A wrong count can reach 0 while a reader is still inside, releasing \texttt{room} too early and letting a writer in during a read, or never reach 0, so that \texttt{room} is never released and the writers wait forever.
+  \item Writer 2 waits forever. While at least one reader is inside, \texttt{readers} never drops to 0, so \texttt{room} is never released, and new readers can still enter because only the first one needed \texttt{room}. The writer is ready but never gets its turn: this is \textbf{starvation}.
+\end{enumerate}
+
+\newpage
+\section{Build a Deadlock, Then Remove It}
+
+\subsection{The deadlock}
+
+Two threads take two mutexes in opposite order: \texttt{one} takes A and then B, \texttt{two} takes B and then A. The original version of the handout was created as a copy, \texttt{deadlock\_orig.c}, and run under \texttt{timeout 5} (Figure~\ref{fig:deadlock}). The two threads printed their first line, then nothing happened for 5 seconds, and \texttt{timeout} killed the program with exit code 124.
+
+\taskfigure{part4-deadlock.png}{The original version hangs: exit code 124}{deadlock}
+
+\subsection{The fix}
+
+In \texttt{two()} the two \texttt{pthread\_mutex\_lock} lines and the two unlock lines were swapped, so that both threads take A first and then B. This is the submitted \texttt{deadlock.c}:
+
+\lstinputlisting[language=C,caption={Implementation of deadlock.c (fixed)}]{../deadlock.c}
+
+The fixed program finished normally with exit code 0 (Figure~\ref{fig:deadlock-fixed}). The text of the first line of \texttt{two} was kept as in the handout; in the fixed version \texttt{two} actually holds A at that moment.
+
+\taskfigure{part4-deadlock-fixed.png}{The fixed version ends normally: exit code 0}{deadlock-fixed}
+
+\subsection{Without sleep}
+
+For the second question, both \texttt{sleep(1)} lines were removed from the original version in a copy, \texttt{deadlock\_nosleep.c}, and the program was run ten times, each run under \texttt{timeout 2}. The loop prints the exit code of every run: 124 means that the run hung, 0 that it finished (Figure~\ref{fig:nosleep}). In these ten runs the program hung every time. In earlier test runs on the same machine the result was not always the same: in one series of ten runs, one run finished with exit code 0 and nine hung.
+
+\taskfigure{part4-deadlock-nosleep.png}{Ten runs without sleep}{nosleep}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item Thread \texttt{one} holds mutex A and waits for B; thread \texttt{two} holds mutex B and waits for A. The waiting forms a circle that nobody can leave:
+\begin{lstlisting}
+  one --holds--> A <--waits for-- two
+   |                               |
+ waits for                       holds
+   |                               |
+   +-----------> B <---------------+
+\end{lstlisting}
+  \item Without the \texttt{sleep(1)} lines the program still hung in all ten runs of Figure~\ref{fig:nosleep}, but it is no longer guaranteed to hang: whether it hangs now depends only on timing. If \texttt{one} takes both mutexes before \texttt{two} takes B, the program ends; otherwise it hangs. On this machine the two threads start almost at the same moment on different cores, so they usually both get their first mutex and the program hangs, but in earlier test runs it sometimes finished. This is worse, not better: the bug is still there, but now it is intermittent, so the program may pass a test, be hard to reproduce and debug, and hang later on another machine or under another load.
+  \item If every thread takes the locks in the same order, a thread that holds B already holds A, so nobody can hold B while waiting for A, and a circle of waiting can never close.
+\end{enumerate}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work combined the synchronization tools of Laboratory Work 11. In the producer-consumer problem two counting semaphores, \texttt{empty} and \texttt{full}, made the producer wait when the buffer was full and the consumer wait when it was empty, while a mutex protected the buffer itself; the same scheme works inside the kernel for every Unix pipe. Swapping two lines, so that the producer slept on a semaphore while holding the mutex, was enough to stop the program, which showed that the order of the operations matters as much as the tools.
+
+The condition variable showed another way to wait for an event: the state is kept in an ordinary variable protected by a mutex, and the condition variable is only the place where a thread sleeps. Because a thread can wake up without the condition being true, the condition is checked in a \texttt{while} loop. The readers-writers solution let many readers in together while keeping each writer alone, at the risk of starving the writers when readers never stop arriving.
+
+Finally, two threads that took two mutexes in opposite order formed a circle of waiting and deadlocked. Without the \texttt{sleep} calls the deadlock became intermittent, which is more dangerous because it is harder to see. Taking the locks in the same order in every thread removed the circle and the deadlock.
+
+\end{document}

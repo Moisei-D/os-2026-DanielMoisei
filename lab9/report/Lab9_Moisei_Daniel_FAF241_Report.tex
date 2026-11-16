@@ -1,0 +1,210 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab9_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.75\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 9\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Watching System Calls with strace\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to observe the boundary between a program and the Linux kernel: the system call. The tool \texttt{strace} runs a program and prints every system call it makes, with its arguments and its return value. I used it first on a familiar command, \texttt{ls -l}, then on a small C program, \texttt{syscalls.c}, that opens, writes, reads and closes a file directly through system calls, and finally to count how many calls of each kind a program makes.
+
+The work was done on CachyOS (Arch Linux). \texttt{strace} was not installed by default; it was installed with the AUR helper \inlinecmd{paru -S strace} instead of \texttt{apt}, which the handout mentions for Debian and Ubuntu.
+
+\newpage
+\section{See the Calls of a Real Command}
+
+\subsection{Tracing ls -l}
+
+The command \inlinecmd{strace -f -e trace=openat,read,write,close ls -l} prints only the four file-related calls. The beginning of the trace is a long burst of \texttt{openat}, \texttt{read} and \texttt{close}: the dynamic loader opens \texttt{/etc/ld.so.cache} and the shared libraries (\texttt{libcap.so.2}, \texttt{libc.so.6}), then \texttt{ls} opens the locale files, the current directory, and \texttt{/etc/passwd} and \texttt{/etc/group} to translate the numeric owner and group into names. Several \texttt{openat} calls return \texttt{-1 ENOENT}: these are translation files that do not exist for the English locale, and \texttt{ls} simply continues.
+
+Figure~\ref{fig:ls-trace} shows the end of the trace. After all the files have been read and closed, the whole listing is printed by a single call, \texttt{write(1, "total 4\textbackslash n...", 66) = 66}, and the program ends by closing descriptors 1 and 2.
+
+\taskfigure{part1-ls-trace.png}{The end of the trace of ls -l: one write to descriptor 1}{ls-trace}
+
+\subsection{How many system calls}
+
+To count all the system calls, not only the four traced above, the full trace was filtered with \texttt{grep}, counting the lines that start with a call name (Figure~\ref{fig:ls-count}). One simple \texttt{ls -l} made 259 system calls. Most of them are start-up work (\texttt{execve}, \texttt{mmap}, \texttt{mprotect}, \texttt{brk}, loading of the libraries) and user-name lookups; the real output is a single \texttt{write}.
+
+\taskfigure{part1-ls-count.png}{The number of system calls made by ls -l}{ls-count}
+
+\subsection{Answer}
+
+\texttt{ls} prints to the screen with the system call \texttt{write}, and it writes to descriptor \textbf{1}, the standard output, which is connected to the terminal. The listing of the directory is sent in one \texttt{write} call of 66 bytes (the directory contained only \texttt{syscalls.c}).
+
+\newpage
+\section{A Program That Calls the Kernel Directly}
+
+\subsection{The program}
+
+The program \texttt{syscalls.c} opens \texttt{note.txt}, writes one line into it, closes it, then opens it again and reads the line back. The file itself is accessed only through the system-call wrappers \texttt{open}, \texttt{write}, \texttt{read} and \texttt{close}; \texttt{printf} is used only to report what happened.
+
+\lstinputlisting[language=C,caption={Implementation of syscalls.c}]{../syscalls.c}
+
+The program compiled without warnings and printed the expected output (Figure~\ref{fig:syscalls-run}): descriptor 3, 14 bytes written, and the same 14 bytes read back.
+
+\taskfigure{part2-syscalls-run.png}{Compilation and execution of syscalls}{syscalls-run}
+
+\subsection{The program seen from outside}
+
+Under \inlinecmd{strace -e trace=openat,write,read,close ./syscalls} the C calls of the program appear one-to-one as system calls (Figure~\ref{fig:syscalls-strace}). Before them there are a few set-up calls of the dynamic loader, which opens \texttt{ld.so.cache} and \texttt{libc.so.6}. Then come the six calls of the program:
+
+\begin{lstlisting}
+openat(AT_FDCWD, "note.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3
+write(3, "hello, kernel\n", 14)         = 14
+close(3)                                = 0
+openat(AT_FDCWD, "note.txt", O_RDONLY)  = 3
+read(3, "hello, kernel\n", 63)          = 14
+close(3)                                = 0
+\end{lstlisting}
+
+The C function \texttt{open} is implemented in glibc with the system call \texttt{openat}, using \texttt{AT\_FDCWD} to mean ``relative to the current directory''. The \texttt{read} asks for 63 bytes (\texttt{sizeof(buf) - 1}) but receives 14, because the file contains only 14 bytes.
+
+Between these calls the trace also shows the three \texttt{printf} lines, each as its own \texttt{write} to descriptor 1:
+
+\begin{lstlisting}
+write(1, "open returned descriptor 3\n", 27) = 27
+write(1, "write sent 14 bytes\n", 20)        = 20
+write(1, "read got 14 bytes: hello, kernel"..., 33) = 33
+\end{lstlisting}
+
+Each one comes right after the \texttt{printf} that produced it, because the standard output is a terminal and the C library sends it line by line. The text of the program appears on the screen in the middle of the \texttt{strace} line, since both write to the same terminal: the program to descriptor 1 and \texttt{strace} to descriptor 2.
+
+\taskfigure{part2-syscalls-strace.png}{The system calls of syscalls traced by strace}{syscalls-strace}
+
+\subsection{Answer}
+
+Descriptors 0, 1 and 2 are already taken when the program starts: every process inherits from the shell its \textbf{standard input} (0, the keyboard), its \textbf{standard output} (1, the screen) and its \textbf{standard error} (2, the screen). The kernel always returns the smallest free descriptor, so the first file opened by the program gets 3. After \texttt{close(3)} the number is free again, which is why the second \texttt{openat} also returns 3.
+
+\newpage
+\section{Count One Kind of Call}
+
+\subsection{A summary of all the calls}
+
+The option \texttt{-c} makes \texttt{strace} print, instead of every call, a table with the number of times each system call was made and how many of them failed (Figure~\ref{fig:syscalls-count}). The program's own output was sent to \texttt{/dev/null} so that only the table remains.
+
+\taskfigure{part3-syscalls-count.png}{The summary of the system calls of syscalls}{syscalls-count}
+
+\texttt{syscalls} made 41 system calls in total. Its own work is visible in the table: 4 \texttt{openat} (2 for the loader, 2 for \texttt{note.txt}), 2 \texttt{read} (the library header and the 14 bytes of the file), 2 \texttt{write} (the 14 bytes into \texttt{note.txt}, and a single write with all three \texttt{printf} lines: with the output sent to \texttt{/dev/null} instead of the terminal, the C library buffers the lines and writes them together at exit) and 4 \texttt{close}. The 2 errors are normal start-up probes: \texttt{access} checks for a preload file that does not exist, and \texttt{ioctl} checks whether the standard output is a terminal, which fails for \texttt{/dev/null}. All the other rows (\texttt{mmap}, \texttt{mprotect}, \texttt{brk}, \texttt{execve}, \ldots) belong to the dynamic loader and the C library, not to the code of the program.
+
+\subsection{Counting only the write calls of ls}
+
+To count one kind of call, the trace was restricted to \texttt{write} with \inlinecmd{-e trace=write} and the lines were counted (Figure~\ref{fig:ls-writes}). Out of its 259 system calls, \texttt{ls -l} makes exactly \textbf{one} \texttt{write}: the C library collects the whole listing in its buffer and hands it to the kernel at once. Each system call has a cost, so buffering the output saves many crossings between user mode and kernel mode.
+
+\taskfigure{part3-ls-writes.png}{Only one write call in ls -l}{ls-writes}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work made the system call visible. Every action that touches something outside the process, such as opening a file, reading a directory or printing to the screen, is a request to the kernel, and \texttt{strace} shows each request with its arguments and result. Even a small command like \texttt{ls -l} made 259 system calls, most of them to load the shared libraries and prepare the program, and only one to print the result.
+
+The small program \texttt{syscalls.c} showed that the C functions \texttt{open}, \texttt{write}, \texttt{read} and \texttt{close} map directly onto system calls with the same arguments, with \texttt{open} implemented as \texttt{openat}. The descriptor numbers confirmed the rule seen in Laboratory Work 7: descriptors 0, 1 and 2 are inherited from the shell, and the kernel always gives the smallest free number. Finally, \texttt{strace -c} showed how the C library reduces the number of system calls by buffering output, so that several \texttt{printf} lines, or a whole directory listing, leave the program in a single \texttt{write}.
+
+\end{document}

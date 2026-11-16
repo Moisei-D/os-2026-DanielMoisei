@@ -8,6 +8,8 @@ with its pid, name and return value. The mask is copied to children by `fork` an
 The changes are committed in the xv6 tree as
 `45ad329 Lab 10: add the trace system call (SYS_trace = 23)`.
 The same diff is saved here in `trace.patch`, and the full QEMU output in `trace-output.txt`.
+The outputs below are the ones in the screenshots of the PDF report
+(`report/Lab10_Moisei_Daniel_FAF241_Report.pdf`).
 
 ## Part 1 - The number and the user side
 
@@ -81,21 +83,27 @@ $ trace 2147483647 grep hello README
 ```
 $ trace 2 usertests forkforkfork
 usertests starting
-test forkforkfork: 6: syscall fork -> 7
-7: syscall fork -> 8
+test forkforkfork: 7: syscall fork -> 8
 8: syscall fork -> 9
-8: syscall fork -> 10
+9: syscall fork -> 10
 9: syscall fork -> 11
+9: syscall fork -> 12
+10: syscall fork -> 13
 ...
-8: syscall fork -> 67
+11: syscall fork -> 35
+...
+10: syscall fork -> 67
+9: syscall fork -> 68
+10: syscall fork -> -1
 9: syscall fork -> -1
-8: syscall fork -> -1
+11: syscall fork -> -1
 OK
 ALL TESTS PASSED
 ```
 
-The forks stop at `-1` when the process table (`NPROC = 64`) is full. In my run five pids printed
-fork lines (6, 7, 8, 9 and 10), not three as in the handout. The test's processes all fork in a
+The children got pids 8 to 68; then the process table (`NPROC = 64`) was full and the last three
+calls returned `-1`. In my run five pids printed fork lines (7, 8, 9, 10 and 11), not three as in
+the handout. The test's processes all fork in a
 loop and xv6 runs on 3 CPUs, so how many of them get to call `fork` before the table fills depends
 on the scheduling. The full list is in `trace-output.txt`.
 
@@ -103,18 +111,19 @@ on the scheduling. The full list is in `trace-output.txt`.
 
 ```
 $ trace 65536 echo hi
-hi5: syscall write -> 2
+hi69: syscall write -> 2
 
-5: syscall write -> 1
+69: syscall write -> 1
 ```
 
-The pid is 5 here, not 69 as in the handout, because I ran it in a fresh xv6 session.
+The pid is 69, as in the handout's example: xv6 gives pids in increasing order, and
+`forkforkfork` had just used the pids up to 68.
 
 ## Answers (also in `notes.txt`)
 
 1. **Why only `read`, not `open` or `close`?** 32 = 2^5 has only bit 5 on, and 5 is `SYS_read`.
    `open` (15) and `close` (21) still run, but their bits are off, so they are not printed.
-2. **Which line lets several pids print in forkforkfork?** `np->trace_mask = p->trace_mask;` in
+2. **Which line lets several pids (here five) print in forkforkfork?** `np->trace_mask = p->trace_mask;` in
    `fork()` (`kernel/proc.c`): every child copies its parent's mask, so the whole process tree is
    traced.
 3. **Why is the trace line between "hi" and the newline?** xv6 `echo` calls `write` twice: once
@@ -124,8 +133,8 @@ The pid is 5 here, not 69 as in the handout, because I ran it in a fresh xv6 ses
 
 ```
 $ trace 2129920 grep hello README
-3: syscall open -> 3
-3: syscall close -> 0
+70: syscall open -> 3
+70: syscall close -> 0
 ```
 
 ## Files
@@ -133,7 +142,8 @@ $ trace 2129920 grep hello README
 - `trace.c` - the user program (`user/trace.c`).
 - `trace.patch` - the whole Lab 10 diff of the xv6 tree (kernel and user side).
 - `Makefile` - the xv6 Makefile with `$U/_trace\` in `UPROGS`.
-- `trace-output.txt` - the full output of every command above, from QEMU.
+- `trace-output.txt` - the full output of every command above, from QEMU (the screenshot run).
+- `report/` - the PDF report with the screenshots.
 - `notes.txt` - the answers to the "Observe" box.
 
 The optional `sysinfo` system call (not graded) was not done.

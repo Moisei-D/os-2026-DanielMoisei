@@ -1,0 +1,266 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab11_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 11\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: The Race and the Semaphore\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to observe what happens when two threads of the same process modify a shared variable at the same time, and to fix the problem with the tools of the operating system. A race condition was first produced on purpose, then removed with a mutex and with a semaphore. The same semaphore was then used in three different roles: as a lock (start value 1), as a signal that imposes an order between two threads (start value 0), and as a counter that limits how many threads may be inside at once (start value $N$).
+
+All the programs were compiled with \inlinecmd{gcc -Wall -pthread} and without \texttt{-O2}, so that the optimizer does not hide the race of Part 1.
+
+\newpage
+\section{See the Race}
+
+\subsection{The program}
+
+Two threads each add 1 to the same global counter one million times, without any protection. The correct result is 2\,000\,000.
+
+\lstinputlisting[language=C,caption={Implementation of race.c}]{../race.c}
+
+The program was run three times (Figure~\ref{fig:race}). The result was never 2\,000\,000, and it was different at every run: 1\,188\,354, 1\,111\,694 and 1\,039\,394. Between 40\% and 48\% of the additions were lost.
+
+\taskfigure{part1-race.png}{Three runs of race: additions are lost}{race}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item \texttt{counter++} looks like one step, but the CPU does three: \textbf{load} the value of \texttt{counter} from memory into a register, \textbf{add} 1 to the register, and \textbf{store} the register back into \texttt{counter}.
+  \item Suppose \texttt{counter} is 100. Thread A loads 100 into its register; before A stores, thread B also loads 100. A adds 1 and stores 101; B adds 1 and also stores 101. Two additions were made, but the counter grew by only 1: B's store overwrote A's result, so one addition is lost.
+  \item The two threads run in parallel on different cores, and the moments when their load, add and store steps overlap depend on scheduling, interrupts, caches and the other work of the system. This timing is never the same twice, so the number of lost additions changes at every run.
+\end{enumerate}
+
+\newpage
+\section{Fix It: Mutex, Then Semaphore}
+
+\subsection{A mutex around counter++}
+
+The line between \texttt{pthread\_mutex\_lock} and \texttt{pthread\_mutex\_unlock} is the critical section: only one thread can be inside it at a time, so the three steps of \texttt{counter++} can no longer be interleaved.
+
+\lstinputlisting[language=C,caption={Implementation of mutex.c}]{../mutex.c}
+
+\taskfigure{part2-mutex.png}{Three runs of mutex: always 2\,000\,000}{mutex}
+
+\subsection{The same lock, made from a semaphore}
+
+A semaphore is a number that never goes below 0: \texttt{sem\_wait} takes one unit, or waits if there is none, and \texttt{sem\_post} gives one back. A semaphore that starts at 1 lets exactly one thread in, so it behaves like a mutex.
+
+\lstinputlisting[language=C,caption={Implementation of sem.c}]{../sem.c}
+
+\taskfigure{part2-sem.png}{Three runs of sem: always 2\,000\,000}{sem}
+
+\subsection{The price of the lock}
+
+The three versions were timed with \texttt{time} (Figure~\ref{fig:time}). The unprotected version is the fastest but wrong; the mutex is slower, and the semaphore is the slowest of the three, in the same order as on the reference machine of the handout:
+
+\begin{center}
+\begin{tabular}{|l|l|r|}
+  \hline
+  \textbf{Program} & \textbf{Result} & \textbf{Total time} \\
+  \hline
+  race  & 1\,114\,644 (wrong) & 0.036 s \\
+  mutex & 2\,000\,000 & 0.078 s \\
+  sem   & 2\,000\,000 & 0.107 s \\
+  \hline
+\end{tabular}
+\end{center}
+
+\taskfigure{part2-time.png}{The time of race, mutex and sem}{time}
+
+\subsection{A semaphore that starts at 2}
+
+To answer the second question, \texttt{sem\_init(\&s, 0, 1)} was changed to \texttt{sem\_init(\&s, 0, 2)} in a copy of the program, \texttt{sem2.c} (Figure~\ref{fig:sem2}). The result is wrong again: 1\,988\,218, 1\,988\,663 and 1\,988\,836, so about 11\,000 to 12\,000 additions were lost at every run.
+
+\taskfigure{part2-sem-init2.png}{The semaphore started at 2: the race comes back}{sem2}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item Yes. The three runs of \texttt{mutex} and the three runs of \texttt{sem} all printed exactly 2\,000\,000.
+  \item With \texttt{sem\_init(\&s, 0, 2)} the semaphore lets \textbf{two} threads pass \texttt{sem\_wait} at the same time. There are only two threads, so both can be inside the critical section together and the race returns: the result is again below 2\,000\,000. Fewer additions are lost than in \texttt{race.c} (about 12\,000 instead of about 900\,000), because most of the time is spent in \texttt{sem\_wait} and \texttt{sem\_post} and the two increments overlap less often, but the result is still not correct. To work as a lock, the semaphore must start at 1.
+  \item The locked version is slower because every addition also costs a lock and an unlock. These are atomic operations on a shared variable that must move between the caches of the two cores, and when the lock is taken the other thread has to wait, sometimes by sleeping in the kernel. The two threads no longer add in parallel: they take turns.
+\end{enumerate}
+
+\newpage
+\section{A Semaphore as a Signal}
+
+\subsection{The program}
+
+Here the problem is the order: thread B must read the message only after thread A has written it. The semaphore \texttt{ready} starts at 0, so it is a closed door: B blocks in \texttt{sem\_wait} until A calls \texttt{sem\_post}.
+
+\lstinputlisting[language=C,caption={Implementation of order.c}]{../order.c}
+
+B printed its first line at once, then nothing happened for one second, then A wrote the message and B read it (Figure~\ref{fig:order}).
+
+\taskfigure{part3-order.png}{B waits until A has written the message}{order}
+
+\subsection{Start value 1}
+
+In a copy of the program, \texttt{order1.c}, the start value was changed to 1 (Figure~\ref{fig:order1}). B no longer waits and reads an empty message.
+
+\taskfigure{part3-order-init1.png}{The semaphore started at 1: B reads before A writes}{order1}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item With \texttt{sem\_init(\&ready, 0, 1)} B reads an \textbf{empty string}. The semaphore already has one unit at the start, so B's \texttt{sem\_wait} does not block: B takes the unit and reads \texttt{message} immediately, while A is still sleeping and has written nothing. \texttt{message} is a global array, so it is filled with zeros, which is an empty string.
+  \item A semaphore that starts at 0 means that the event has not happened yet: a thread that calls \texttt{sem\_wait} blocks until another thread signals the event with \texttt{sem\_post}.
+\end{enumerate}
+
+\newpage
+\section{A Semaphore as a Counter: the Parking Lot}
+
+\subsection{The program}
+
+Six cars share three places. The semaphore \texttt{places} starts at 3 and counts the free places; the mutex only keeps the variable \texttt{inside} and the \texttt{printf} together.
+
+\lstinputlisting[language=C,caption={Implementation of parking.c}]{../parking.c}
+
+The value of \texttt{inside} never exceeded 3 (Figure~\ref{fig:parking}). Cars 1, 3 and 2 entered first; car 4 entered only after cars 1 and 3 had left, and cars 5 and 6 only after car 2 had left. The order in which the cars enter differs from the example in the handout, because it is decided by the scheduler, but the limit of three is always respected.
+
+\taskfigure{part4-parking.png}{Six cars, three places}{parking}
+
+\subsection{One place}
+
+In a copy of the program, \texttt{parking1.c}, \texttt{PLACES} was set to 1 (Figure~\ref{fig:parking1}). Only one car is inside at a time: each car leaves before the next one enters.
+
+\taskfigure{part4-parking-one.png}{Six cars, one place}{parking1}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item The largest value of \texttt{inside} is 3. It is guaranteed by \texttt{sem\_init(\&places, 0, PLACES)} with \texttt{PLACES = 3}, together with \texttt{sem\_wait(\&places)} at the entrance of \texttt{car()}: the semaphore starts with three units, every car takes one before entering, and the fourth car blocks in \texttt{sem\_wait} until a car leaves and gives its unit back with \texttt{sem\_post}.
+  \item With \texttt{PLACES} set to 1 the semaphore becomes a \textbf{mutex} (a binary semaphore), like the one in \texttt{sem.c}: only one car can be inside at a time.
+\end{enumerate}
+
+\newpage
+\section{Optional: No Lock at All}
+
+For a single counter there is a third way: an atomic operation. \texttt{atomic\_fetch\_add} performs the load, the add and the store as one indivisible step of the CPU, so no other thread can cut in between them.
+
+\lstinputlisting[language=C,caption={Implementation of atomic.c}]{../atomic.c}
+
+The result is correct, and the program took 0.056 s, faster than the mutex (0.078 s) and the semaphore (0.107 s) versions, because there is no lock to take and no thread ever waits (Figure~\ref{fig:atomic}).
+
+\taskfigure{stretch-atomic.png}{The counter with an atomic addition}{atomic}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed that a single line of C such as \texttt{counter++} is not a single step for the CPU. When two threads execute it on the same variable at the same time, their load, add and store steps interleave and additions are lost, and because the interleaving depends on timing, the result is different at every run.
+
+The race was removed by making the critical section exclusive, first with a mutex and then with a semaphore that starts at 1. Both gave the correct result every time, at the price of a slower program, since each addition also needs a lock and an unlock and the threads take turns. A semaphore started at 2 let both threads in at once and the race returned, which showed that the start value decides what the semaphore means.
+
+The same tool was then used in two other roles. Started at 0, the semaphore became a signal that imposed an order between two threads; started at 1 in the same program, it lost that meaning and the reader read the message before it was written. Started at 3, it counted the free places of the parking lot and never allowed more than three cars inside; started at 1, it became a mutex again. Finally, the atomic addition showed that for a single counter the CPU itself can make the three steps indivisible, without any lock.
+
+\end{document}

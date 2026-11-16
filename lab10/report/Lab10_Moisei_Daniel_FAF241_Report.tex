@@ -1,0 +1,236 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab10_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 10\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Add Your Own System Call: trace (xv6)\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to change the xv6 kernel for the first time by adding a new system call, \texttt{trace}. A process that calls \texttt{trace(mask)} makes the kernel print every system call whose bit is set in the mask, together with its process id, its name and its return value. In Laboratory Work 9 the tool \texttt{strace} did this on Linux from the outside; here the same idea is built inside the kernel.
+
+The work follows one number, 23, from a user program down to a kernel function: the user stub puts 23 in register \texttt{a7} and executes \texttt{ecall}, the trap handler calls \texttt{syscall()}, and \texttt{syscall()} uses the number as an index into the table of handlers. In our xv6 tree number 22 is already used by \texttt{sync} and the kernel print function is called \texttt{printk}, so \texttt{SYS\_trace} is 23 and the trace lines are printed with \texttt{printk}.
+
+\newpage
+\section{The Number and the User Side}
+
+\subsection{The changes}
+
+The first five edits give the call a number and let user programs ask for it:
+
+\begin{itemize}
+  \item \texttt{kernel/syscall.h}: \texttt{\#define SYS\_trace 23}.
+  \item \texttt{user/user.h}: the declaration \texttt{int trace(int);}.
+  \item \texttt{user/usys.pl}: \texttt{entry("trace");}. At build time this script generates \texttt{user/usys.S}, where \texttt{trace} becomes three instructions: \texttt{li a7, SYS\_trace}, \texttt{ecall}, \texttt{ret}.
+  \item \texttt{user/trace.c}: the user program (Listing~\ref{lst:trace}).
+  \item \texttt{Makefile}: a tab-indented \texttt{\$U/\_trace\textbackslash} line in \texttt{UPROGS}, after \texttt{\$U/\_zombie\textbackslash}.
+\end{itemize}
+
+The program \texttt{trace} sets the mask on itself and then becomes the requested command with \texttt{exec}. The mask is stored in the process, and \texttt{exec} keeps the same process, so the command runs traced.
+
+\lstinputlisting[language=C,caption={Implementation of user/trace.c},label={lst:trace}]{../trace.c}
+
+\subsection{Check 1: the number reaches the kernel}
+
+Before the kernel had a function for number 23, running \texttt{trace} produced the error below (Figure~\ref{fig:unknown}). This is the expected result: the program executed \texttt{ecall} with \texttt{a7 = 23}, the kernel received the number, did not find a handler in its table and returned $-1$, so \texttt{trace} printed \texttt{trace: failed}. To reproduce this state for the screenshot, the table entry \texttt{[SYS\_trace] = sys\_trace} was temporarily commented out and restored afterwards.
+
+\taskfigure{part1-unknown-syscall.png}{Check 1: the kernel receives the unknown system call 23}{unknown}
+
+\newpage
+\section{The Kernel Side}
+
+\subsection{The changes}
+
+\begin{itemize}
+  \item \texttt{kernel/proc.h}: a new field \texttt{int trace\_mask;} in \texttt{struct proc}, so that every process remembers its own mask.
+  \item \texttt{kernel/sysproc.c}: the handler, which reads argument 0 (register \texttt{a0}) and stores it in the current process.
+  \item \texttt{kernel/syscall.c}: the declaration \texttt{extern uint64 sys\_trace(void);}, the entry \texttt{[SYS\_trace] = sys\_trace} in the table, a table of names, and the print in \texttt{syscall()}.
+  \item \texttt{kernel/proc.c}: in \texttt{fork()}, the child copies the mask of its parent.
+\end{itemize}
+
+\begin{lstlisting}[language=C,caption={The handler in kernel/sysproc.c}]
+uint64
+sys_trace(void)
+{
+  int mask;
+  argint(0, &mask);
+  myproc()->trace_mask = mask;
+  return 0;
+}
+\end{lstlisting}
+
+The kernel only knows numbers, so a table placed above \texttt{syscall()} translates them into names. The print is placed \emph{after} the call, because the return value is available in \texttt{a0} only after the handler has run:
+
+\begin{lstlisting}[language=C,caption={The print in syscall(), kernel/syscall.c}]
+    p->trapframe->a0 = syscalls[num]();
+    if((p->trace_mask >> num) & 1)
+      printk("%d: syscall %s -> %ld\n",
+             p->pid, syscallnames[num], p->trapframe->a0);
+\end{lstlisting}
+
+\begin{lstlisting}[language=C,caption={Children inherit the mask, fork() in kernel/proc.c}]
+  safestrcpy(np->name, p->name, sizeof(p->name));
+  np->trace_mask = p->trace_mask;
+\end{lstlisting}
+
+\subsection{Check 2: trace works}
+
+With the kernel side in place, \inlinecmd{trace 32 grep hello README} prints the four \texttt{read} calls of \texttt{grep} (Figure~\ref{fig:trace-read}). The values are exactly the expected ones: $1023 + 965 + 453 = 2441$ bytes, the size of \texttt{README}, read in three pieces, followed by 0 at the end of the file.
+
+\taskfigure{part2-trace-read.png}{Check 2: the read calls of grep}{trace-read}
+
+\newpage
+\section{Play with the Mask}
+
+The mask is read in binary: bit $N$ set means ``print system call number $N$''. For example $32 = 2^5$, and 5 is \texttt{SYS\_read}.
+
+\subsection{All the calls}
+
+The mask $2147483647 = 2^{31} - 1$ has all the bits from 0 to 30 set, so every system call is printed (Figure~\ref{fig:trace-all}). The first line is \texttt{trace} itself: the mask is set during that call and checked right after it. Then come \texttt{exec} (which returns \texttt{argc}, here 3), the \texttt{open} of \texttt{README}, the four \texttt{read} calls and the \texttt{close}.
+
+\taskfigure{part3-trace-all.png}{All the system calls of grep}{trace-all}
+
+\subsection{Only fork}
+
+The mask 2 selects only bit 1, \texttt{SYS\_fork}. The test \texttt{forkforkfork} of \texttt{usertests} forks until the process table is full (Figures~\ref{fig:fork-start} and \ref{fig:fork-end}). Every fork prints the pid of the caller and returns the pid of the new child. The children were created with pids 8 to 68; then the table of 64 processes (\texttt{NPROC}) was full, and the last three calls returned $-1$. The fork lines were printed by five different pids (7, 8, 9, 10 and 11), because each child inherits the mask in \texttt{fork()}. The handout's example shows three pids; how many processes get to call \texttt{fork} before the table is full depends on the scheduling on the 3 CPUs of QEMU.
+
+\taskfigure{part3-forkforkfork-start.png}{forkforkfork traced with mask 2: the beginning}{fork-start}
+\taskfigure{part3-forkforkfork-end.png}{forkforkfork traced with mask 2: the end}{fork-end}
+
+\subsection{Only write}
+
+The mask $65536 = 2^{16}$ selects only \texttt{SYS\_write} (Figure~\ref{fig:trace-write}). The process got pid 69, as in the handout's example: xv6 gives pids in increasing order, and \texttt{forkforkfork} had just used the pids up to 68. The trace line is printed between \texttt{hi} and the new line, because xv6 \texttt{echo} calls \texttt{write} twice: once for the word \texttt{hi} (2 bytes) and once for \texttt{\textbackslash n} (1 byte). The kernel prints the trace line right after each call returns, so the first trace line lands between the two.
+
+\taskfigure{part3-trace-write.png}{The two write calls of echo}{trace-write}
+
+\subsection{Only open and close}
+
+To trace \texttt{open} (15) and \texttt{close} (21) and nothing else, both bits are set: $2^{15} + 2^{21} = 32768 + 2097152 = 2129920$. The command prints exactly one \texttt{open}, which returns descriptor 3, and one \texttt{close} (Figure~\ref{fig:trace-open-close}). All the \texttt{read} calls of \texttt{grep} are no longer printed.
+
+\taskfigure{part3-trace-open-close.png}{Only open and close, with mask 2129920}{trace-open-close}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item In \inlinecmd{trace 32 grep hello README} only \texttt{read} is printed because $32 = 2^5$ has only bit 5 set, and 5 is \texttt{SYS\_read}. The calls \texttt{open} (15) and \texttt{close} (21) still run, but their bits are 0, so they are not printed.
+  \item Several pids (here five) print lines in \texttt{forkforkfork} because of the line \inlinecmd{np->trace_mask = p->trace_mask;} added to \texttt{fork()} in \texttt{kernel/proc.c}: every child copies the mask of its parent, so the whole tree of processes is traced.
+  \item The trace line appears between \texttt{hi} and the new line because \texttt{echo} calls \texttt{write} twice, once for \texttt{hi} and once for the new line, and the kernel prints the trace line after each call.
+  \item The mask that traces only \texttt{open} and \texttt{close} is $2^{15} + 2^{21} = 2129920$.
+\end{enumerate}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed the full path of a system call in xv6. On the user side, a system call is only a number placed in register \texttt{a7} followed by the \texttt{ecall} instruction; the stub that does this is generated from \texttt{usys.pl}. On the kernel side, \texttt{syscall()} reads the number from the saved registers of the process, uses it as an index into the table of handlers, and stores the return value back in \texttt{a0}. Adding a call therefore needs a number, a stub, a declaration, a handler and a table entry; the first check showed that without the table entry the kernel rejects the number as an unknown system call.
+
+The new call \texttt{trace} stores a mask in the process structure, and \texttt{syscall()} prints every call whose bit is set. Because the mask lives in \texttt{struct proc}, it survives \texttt{exec} and is copied to children by \texttt{fork}, so a single \texttt{trace} command traces a whole program and all the processes it creates. The experiments with the masks confirmed the binary encoding of the bits and explained the exact system calls of \texttt{grep}, \texttt{echo} and \texttt{usertests}, giving the same kind of view that \texttt{strace} gave on Linux in Laboratory Work 9.
+
+\end{document}

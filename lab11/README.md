@@ -7,5 +7,6 @@
 - `parking.c` - a semaphore that starts at 3 used as a counter.
 - `atomic.c` - optional: the counter with `atomic_fetch_add`, no lock.
 - `report.md` - the answers to the "Observe" boxes, with the real outputs.
+- `report/` - the LaTeX report and its PDF, with the screenshots in `report/figures/`.
 
 Build: `gcc -Wall -pthread -o race race.c` (same for the others, no `-O2`).

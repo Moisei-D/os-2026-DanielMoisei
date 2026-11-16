@@ -20,5 +20,5 @@ Lab 10 - Add Your Own System Call: trace - answers
 4. Which mask traces both open (15) and close (21), and nothing else?
    2^15 + 2^21 = 32768 + 2097152 = 2129920.
    Checked: "trace 2129920 grep hello README" prints only
-       3: syscall open -> 3
-       3: syscall close -> 0
+       70: syscall open -> 3
+       70: syscall close -> 0

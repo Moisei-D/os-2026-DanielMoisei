@@ -5,4 +5,5 @@
 - `trace.c` - `user/trace.c`.
 - `trace.patch` - the full diff of the xv6 tree; apply with `git apply trace.patch` in `~/xv6-riscv`.
 - `Makefile` - the xv6 Makefile with `$U/_trace\` in `UPROGS`.
-- `trace-output.txt` - QEMU output of all the commands.
+- `trace-output.txt` - QEMU output of all the commands (the run shown in the screenshots).
+- `report/` - the LaTeX report and its PDF, with the screenshots in `report/figures/`.
