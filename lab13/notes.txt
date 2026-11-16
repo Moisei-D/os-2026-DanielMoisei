@@ -1,0 +1,35 @@
+Lab 13 - Semaphores in Your Own Kernel - answers
+
+1. Without the lock, why do the letters mix? (How many system calls does one line cost?)
+   mix writes one letter per write(): one line is 30 letters + the newline = 31 write
+   system calls. Between any two of them the kernel may run the other process, and with
+   3 CPUs the two processes really run at the same time, so their single-letter writes
+   reach the console interleaved: the letters of the two lines mix.
+
+2. With the lock every line is whole. Which two lines of mix.c make one line a critical section?
+       if (uselock)
+         sem_down(3);
+   before the loop that writes the line, and
+       if (uselock)
+         sem_up(3);
+   after it. Semaphore 3 starts at 1, so only one process at a time can be between
+   sem_down(3) and sem_up(3): the 31 writes of one line are no longer interrupted by the
+   other process.
+
+3. In sem_down the test is "while (s->value == 0)", not "if". Why can a process wake up
+   and still find 0?
+   wakeup(s) wakes EVERY process sleeping on the address s, but sem_up added only one unit.
+   If two processes wait and one sem_up comes, both wake up; the first one to take the
+   spinlock again takes the unit (value 1 -> 0), and the second one finds the value 0
+   again. It must check again and go back to sleep, which the while loop does. With "if"
+   it would go on and decrement 0 to -1. (A process can also leave sleep() because it was
+   killed, without any sem_up.)
+
+4. sem_down calls release(&s->lock) BEFORE sleep(). What would go wrong if it slept holding
+   the spinlock?
+   The process that should wake it calls sem_up, which must first acquire(&s->lock). That
+   lock would be held by the sleeping process, so sem_up would spin forever and never reach
+   wakeup(s): the sleeper is never woken, a deadlock. A spinlock also turns interrupts off
+   on its CPU, so that CPU could not be used either. In our xv6 it does not even get that
+   far: sched() checks that the process holds no other spinlock and panics with
+   "sched locks".

@@ -1,0 +1,216 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab13_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 13\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Semaphores in Your Own Kernel (xv6)\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+In Laboratory Works 11 and 12 semaphores were used from the C library. The purpose of this laboratory work was to build them inside the xv6 kernel, as three new system calls: \texttt{sem\_init}, \texttt{sem\_down} and \texttt{sem\_up}, with the numbers 24, 25 and 26. A kernel semaphore turned out to be only a number, a spinlock that protects it, and the kernel's \texttt{sleep} and \texttt{wakeup}. A process that waits really goes to sleep and uses no CPU.
+
+In our xv6 tree number 22 is \texttt{sync} and 23 is \texttt{trace} from Laboratory Work 10, so the new calls start at 24. Our kernel sleeps in two steps, \texttt{sleep\_prepare(chan)} followed by \texttt{sleep()}, instead of \texttt{sleep(chan, lock)} as in the xv6 book.
+
+\newpage
+\section{The Numbers and the User Side}
+
+\subsection{The changes}
+
+The user side follows the same recipe as \texttt{trace} in Laboratory Work 10, three times:
+
+\begin{itemize}
+  \item \texttt{kernel/syscall.h}: \texttt{SYS\_sem\_init} 24, \texttt{SYS\_sem\_down} 25 and \texttt{SYS\_sem\_up} 26.
+  \item \texttt{user/user.h}: the declarations \texttt{int sem\_init(int, int);}, \texttt{int sem\_down(int);} and \texttt{int sem\_up(int);}.
+  \item \texttt{user/usys.pl}: \texttt{entry("sem\_init");}, \texttt{entry("sem\_down");} and \texttt{entry("sem\_up");}, which generate the stubs that put the number in \texttt{a7} and execute \texttt{ecall}.
+  \item \texttt{user/semtest.c} and \texttt{user/mix.c}: the two test programs.
+  \item \texttt{Makefile}: tab-indented \texttt{\$U/\_semtest\textbackslash} and \texttt{\$U/\_mix\textbackslash} lines in \texttt{UPROGS}, after \texttt{\$U/\_zombie\textbackslash}.
+\end{itemize}
+
+The semaphores are numbered 0 to 7 and shared by all processes. \texttt{semtest} contains two tests. In the first, semaphore 0 starts at 0, so the child must wait in \texttt{sem\_down(0)} until the parent, after a pause of 10 ticks, calls \texttt{sem\_up(0)}. In the second, ping and pong take turns with two semaphores that pass the turn to each other.
+
+\lstinputlisting[language=C,caption={Implementation of user/semtest.c}]{../semtest.c}
+
+\subsection{Check 1: the calls reach the kernel}
+
+Before the kernel side existed, \texttt{semtest} produced the errors below (Figure~\ref{fig:unknown}). The calls reached the kernel with the numbers 24, 25 and 26, but the kernel had no handler for them and returned $-1$. Without a working \texttt{sem\_down}, the child did not wait: the line \texttt{child:} appeared \emph{before} the line \texttt{parent:}, and after the lines shown in the figure ping and pong were mixed with the error lines of the calls 24, 25 and 26. To reproduce this state for the screenshot, the three new entries of the system-call table were temporarily commented out and restored afterwards.
+
+\taskfigure{part1-unknown-syscall.png}{Check 1: the kernel does not know the calls 24, 25 and 26 yet}{unknown}
+
+\newpage
+\section{The Kernel Side}
+
+\subsection{kernel/sem.c}
+
+The new file \texttt{kernel/sem.c} holds a table of 8 semaphores, each made of a spinlock and a value. \texttt{sem\_init} sets the value. \texttt{sem\_down} is the heart of the file: while the value is 0, the process registers the address of the semaphore as the thing it waits for with \texttt{sleep\_prepare(s)}, releases the spinlock, and sleeps; when it wakes up it takes the spinlock again and checks the value once more. \texttt{sem\_up} adds 1 and wakes every process sleeping on that address.
+
+\lstinputlisting[language=C,caption={Implementation of kernel/sem.c}]{../sem.c}
+
+\subsection{The Makefile and the table}
+
+The object file \texttt{\$K/sem.o} was added to the \texttt{OBJS} list of the \texttt{Makefile}, after \texttt{\$K/sysproc.o}, so that \texttt{sem.c} is compiled into the kernel. In \texttt{kernel/syscall.c} the three handlers were declared and given their places in the table:
+
+\begin{lstlisting}[language=C]
+extern uint64 sys_sem_init(void);
+extern uint64 sys_sem_down(void);
+extern uint64 sys_sem_up(void);
+...
+  [SYS_sem_init] = sys_sem_init,
+  [SYS_sem_down] = sys_sem_down,
+  [SYS_sem_up]   = sys_sem_up,
+\end{lstlisting}
+
+Because our tree also contains \texttt{trace} from Laboratory Work 10, the three names were also added to its table of system-call names. Without them, \texttt{trace} with a mask that includes bits 24 to 26 read past the end of that table and the kernel stopped with \texttt{panic: acquire}.
+
+\subsection{Check 2: semtest}
+
+With the kernel side in place, \texttt{semtest} printed exactly the expected output (Figure~\ref{fig:semtest}). The parent waits 10 ticks before it lets the child go, yet the child prints second: it was asleep in \texttt{sem\_down}. Ping and pong alternate strictly, three times each, and the program ends with \texttt{semtest: OK}.
+
+\taskfigure{part2-semtest.png}{Check 2: the order and the ping-pong are correct}{semtest}
+
+\newpage
+\section{A Semaphore as a Lock: mix}
+
+\subsection{The program}
+
+\texttt{mix} starts two processes that each print five lines of 30 letters, one letter per \texttt{write} system call. With the argument \texttt{lock}, semaphore 3, started at 1, is used as a lock around every line. \texttt{make qemu} runs xv6 on 3 CPUs, so the two processes really run at the same time.
+
+\lstinputlisting[language=C,caption={Implementation of user/mix.c}]{../mix.c}
+
+\subsection{Without the lock}
+
+\texttt{mix} was run twice without the lock (Figures~\ref{fig:mix1} and \ref{fig:mix2}). The letters \texttt{A} and \texttt{b} of the two processes are mixed, the lines are broken in different places, and the two runs are mixed differently. Each run starts with a short series of \texttt{A}, written before the second process started, and ends with a line of only \texttt{b}: the first process had already finished its five lines, so the second one wrote its last letters alone.
+
+\taskfigure{part3-mix-1.png}{mix without the lock, first run}{mix1}
+\taskfigure{part3-mix-2.png}{mix without the lock, second run}{mix2}
+
+\subsection{With the lock}
+
+With the lock, every line stayed whole (Figure~\ref{fig:mixlock}): exactly 30 letters, then the newline. In this run the first process wrote all its five lines of \texttt{A} before the second wrote its lines of \texttt{b}; the order of the whole lines depends on the scheduler, but no line is broken.
+
+\taskfigure{part3-mix-lock.png}{mix with semaphore 3 as a lock}{mixlock}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item \texttt{mix} writes one letter per \texttt{write}, so one line costs 31 system calls: 30 letters and the newline. Between any two of them the other process can write its own letter, and with 3 CPUs the two processes really run at the same time, so their letters reach the console interleaved.
+  \item The two lines are \inlinecmd{sem_down(3);} before the loop that writes a line and \inlinecmd{sem_up(3);} after it (each under \texttt{if (uselock)}). Semaphore 3 starts at 1, so only one process at a time can be between them: the 31 writes of one line are no longer interrupted by the other process.
+  \item \texttt{wakeup(s)} wakes \emph{every} process that sleeps on the address \texttt{s}, while \texttt{sem\_up} adds only one unit. If two processes wait and one \texttt{sem\_up} comes, both wake up; the first one to take the spinlock again takes the unit, and the second finds the value 0 again. With \texttt{while} it checks again and goes back to sleep; with \texttt{if} it would decrement 0 to $-1$. A process can also leave \texttt{sleep()} because it was killed, without any \texttt{sem\_up}.
+  \item The process that should wake the sleeper calls \texttt{sem\_up}, which must first take \texttt{s->lock}. If the sleeper still held that spinlock, \texttt{sem\_up} would spin forever in \texttt{acquire} and never reach \texttt{wakeup(s)}: the sleeper would never wake up, a deadlock. A spinlock also turns interrupts off on its CPU. In our xv6 it does not even get that far: \texttt{sched()} checks that the process holds no other spinlock and stops the kernel with \texttt{panic("sched locks")}.
+\end{enumerate}
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed that a semaphore needs very little support from the kernel: an integer, a spinlock that makes the changes of the integer atomic, and a way to put a process to sleep and wake it up again. Adding the three system calls followed the recipe of Laboratory Work 10, and the first check showed again that without the table entries the kernel rejects the numbers as unknown system calls, so the child was no longer forced to wait for the parent.
+
+With the kernel side in place, \texttt{semtest} showed the semaphore as a signal and as a way to pass a turn between two processes, and \texttt{mix} showed it as a lock: without it the single-letter writes of two processes running on different CPUs were mixed, with it every line stayed whole. The two details of \texttt{sem\_down} are essential: the value is checked in a \texttt{while} loop because \texttt{wakeup} wakes every sleeper, and the spinlock is released before sleeping because the process that would wake the sleeper needs that same lock.
+
+\end{document}
