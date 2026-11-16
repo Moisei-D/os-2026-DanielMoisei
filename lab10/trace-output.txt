@@ -1,0 +1,88 @@
+$ trace 32 grep hello README
+3: syscall read -> 1023
+3: syscall read -> 965
+3: syscall read -> 453
+3: syscall read -> 0
+$ trace 2147483647 grep hello README
+4: syscall trace -> 0
+4: syscall exec -> 3
+4: syscall open -> 3
+4: syscall read -> 1023
+4: syscall read -> 965
+4: syscall read -> 453
+4: syscall read -> 0
+4: syscall close -> 0
+$ trace 65536 echo hi
+hi5: syscall write -> 2
+
+5: syscall write -> 1
+$ trace 2 usertests forkforkfork
+usertests starting
+test forkforkfork: 6: syscall fork -> 7
+7: syscall fork -> 8
+8: syscall fork -> 9
+8: syscall fork -> 10
+9: syscall fork -> 11
+8: syscall fork -> 12
+8: syscall fork -> 13
+9: syscall fork -> 14
+8: syscall fork -> 15
+8: syscall fork -> 16
+8: syscall fork -> 17
+9: syscall fork -> 18
+8: syscall fork -> 19
+9: syscall fork -> 20
+8: syscall fork -> 21
+9: syscall fork -> 22
+8: syscall fork -> 23
+9: syscall fork -> 24
+8: syscall fork -> 25
+8: syscall fork -> 26
+9: syscall fork -> 27
+8: syscall fork -> 28
+9: syscall fork -> 29
+10: syscall fork -> 30
+10: syscall fork -> 31
+8: syscall fork -> 32
+10: syscall fork -> 33
+10: syscall fork -> 34
+8: syscall fork -> 35
+8: syscall fork -> 36
+9: syscall fork -> 37
+8: syscall fork -> 38
+9: syscall fork -> 39
+8: syscall fork -> 40
+9: syscall fork -> 41
+8: syscall fork -> 42
+8: syscall fork -> 43
+9: syscall fork -> 44
+8: syscall fork -> 45
+9: syscall fork -> 46
+8: syscall fork -> 47
+9: syscall fork -> 48
+8: syscall fork -> 49
+9: syscall fork -> 50
+8: syscall fork -> 51
+9: syscall fork -> 52
+8: syscall fork -> 53
+9: syscall fork -> 54
+8: syscall fork -> 55
+9: syscall fork -> 56
+8: syscall fork -> 57
+8: syscall fork -> 58
+8: syscall fork -> 59
+9: syscall fork -> 60
+8: syscall fork -> 61
+9: syscall fork -> 62
+9: syscall fork -> 63
+9: syscall fork -> 64
+8: syscall fork -> 65
+9: syscall fork -> 66
+8: syscall fork -> 67
+9: syscall fork -> -1
+8: syscall fork -> -1
+OK
+ALL TESTS PASSED
+$ trace 2129920 grep hello README
+3: syscall open -> 3
+3: syscall close -> 0

@@ -1,0 +1,24 @@
+Lab 10 - Add Your Own System Call: trace - answers
+
+1. In "trace 32 grep hello README" why do you see only read, and not open or close?
+   The mask is read in binary and bit N means "print system call N". 32 = 2^5 has only
+   bit 5 on, and 5 is SYS_read. open is 15 and close is 21, their bits are off, so the
+   kernel runs them but does not print them.
+
+2. In forkforkfork, several different pids print lines. Which line of code from Part 2
+   makes that possible?
+   The line added to fork() in kernel/proc.c:
+       np->trace_mask = p->trace_mask;
+   Every child copies the mask of its parent, so the children (and their children) are
+   traced too, each printing with its own pid.
+
+3. In "trace 65536 echo hi" the trace line is printed between "hi" and the new line. Why?
+   xv6 echo calls write twice: once for the argument "hi" (2 bytes) and once for the "\n"
+   (1 byte). The kernel prints the trace line right after each call returns, so the order
+   is: "hi", trace of the first write (-> 2), "\n", trace of the second write (-> 1).
+
+4. Which mask traces both open (15) and close (21), and nothing else?
+   2^15 + 2^21 = 32768 + 2097152 = 2129920.
+   Checked: "trace 2129920 grep hello README" prints only
+       3: syscall open -> 3
+       3: syscall close -> 0
