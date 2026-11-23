@@ -1,0 +1,176 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab17_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 17\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: Threads Share Memory, and Race\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The threads of one process share the same memory. This is their power, because one thread sees at once what another one writes, and their danger, because two threads that change the same variable at the same time without protection lose updates. The purpose of this laboratory work was to see both effects with one small program, \texttt{fire.c}, in which two threads add to the same counter a million times each without a lock, and then to make the race worse by using four threads.
+
+All the programs were compiled with \inlinecmd{gcc -Wall -Wextra -pthread} and run on CachyOS.
+
+\newpage
+\section{Shared and Racing}
+
+\subsection{The program}
+
+The counter is a single global variable. Each thread first prints the value it sees, then adds 1 to it a million times. The correct final value would be 2\,000\,000.
+
+\lstinputlisting[language=C,caption={Implementation of fire.c}]{../fire.c}
+
+The program was compiled and run three times (Figure~\ref{fig:fire}). The final counter was always less than 2\,000\,000 and different at every run: 1\,016\,406, 991\,935 and 1\,046\,364, so about half of the additions were lost. In the second run thread 2 already saw the counter at 15\,220 when it started.
+
+\taskfigure{part1-fire.png}{Three runs of fire: updates are lost}{fire}
+
+\subsection{What thread 2 sees at the start}
+
+The two threads are created almost at the same moment and run on different cores, so thread 2 usually reads the counter before thread 1 has added anything and prints 0. To see the effect asked about in the handout, the program was run 20 times and only the line of thread 2 was kept (Figure~\ref{fig:thread2}). In 19 of the 20 runs thread 2 printed 0, but in the first run it started a little later and printed 52\,703.
+
+\taskfigure{part1-thread2.png}{The start value seen by thread 2 in 20 runs}{thread2}
+
+\subsection{Answers}
+
+\begin{enumerate}
+  \item When thread 2 prints a non-zero counter at the start, it means that it reads the value that thread 1 has already written into the same variable. The two threads do not have their own copies: they share the memory of the process, so a change made by one thread is seen immediately by the other.
+  \item \texttt{counter++} is not one step but three: \textbf{read} the value of \texttt{counter} from memory into a register, \textbf{add} 1 to the register, and \textbf{write} the register back to memory. When both threads read the same value, for example 100, before either of them writes, both write 101: two additions were made, but the counter grew by only one, so one update is lost. How often this overlap happens depends on the exact timing of the two threads on their cores, which is never the same twice, so the final value is different at every run and always below 2\,000\,000.
+\end{enumerate}
+
+\newpage
+\section{Make It Worse, Then Think}
+
+\subsection{Four threads}
+
+For the second part, the program was changed to start four threads instead of two, in \texttt{fire4.c}. Each thread still adds a million, so the correct result is 4\,000\,000.
+
+\lstinputlisting[language=C,caption={Implementation of fire4.c}]{../fire4.c}
+
+\taskfigure{part2-fire4.png}{Three runs with four threads}{fire4}
+
+With four threads the loss became bigger (Figure~\ref{fig:fire4}). The final counter was 1\,249\,827, 1\,214\,827 and 1\,326\,509 out of 4\,000\,000, so about two thirds of the additions were lost, against about half with two threads. Threads 3 and 4, which started a little later, also saw the additions already made by the others, for example 42\,894 and 39\,404. The reason for the bigger loss is that with more threads changing the counter at the same time, the chance that two of them overlap in the read-add-write sequence is higher, and each overlap loses an update.
+
+\subsection{A way to make counter++ safe}
+
+The three steps of \texttt{counter++} must be made indivisible: while one thread is between the read and the write, no other thread may touch the counter. This can be done by putting \texttt{counter++} inside a critical section protected by a lock (a mutex): a thread takes the lock before the increment and releases it after, so only one thread at a time can be inside. Another way is an atomic instruction of the CPU that does the read, the add and the write as one step.
+
+\subsection{Answer}
+
+The lost updates would stop if \texttt{counter++} were executed by only one thread at a time, that is, inside a critical section protected by a lock (mutual exclusion).
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed both sides of the shared memory of threads. A value written by one thread was seen by the other one immediately, which proved that the threads of a process work on the same variables and not on copies. The same sharing caused the race: \texttt{counter++} is a read, an add and a write, and when two threads interleave these steps the updates of one of them are overwritten, so the final counter was always below the expected value and different at every run.
+
+With four threads the loss grew, because more threads overlapped more often. The race can only be removed by making the increment exclusive, so that one thread at a time performs the three steps, with a lock or with an atomic instruction.
+
+\end{document}
