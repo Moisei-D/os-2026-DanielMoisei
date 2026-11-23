@@ -1,0 +1,183 @@
+\documentclass[12pt,a4paper]{article}
+
+% Compile with: tectonic Lab18_Moisei_Daniel_FAF241_Report.tex
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setmonofont{Liberation Mono}
+\usepackage[left=2cm,right=1cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{chngcntr}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\counterwithin{figure}{section}
+\definecolor{codebackground}{HTML}{F2F2F2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+\onehalfspacing
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\captionsetup[figure]{font=small,skip=4pt,justification=centering}
+
+\titleformat{\section}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {\thesection}{0.8em}{\MakeUppercase}
+\titleformat{name=\section,numberless}
+  {\normalfont\bfseries\centering\fontsize{13}{16}\selectfont}
+  {}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{12}{15}\selectfont}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titlespacing*{\subsection}{0pt}{10pt}{6pt}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebackground},
+  frame=none,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\ttfamily,
+  commentstyle=\ttfamily,
+  stringstyle=\ttfamily,
+  xleftmargin=0.4cm,
+  xrightmargin=0.2cm,
+  aboveskip=6pt,
+  belowskip=10pt
+}
+\newcommand{\taskfigure}[4][]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.52,max width=\textwidth,max height=0.85\textheight]{figures/#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+\newcommand{\inlinecmd}[1]{\texttt{\detokenize{#1}}}
+
+\begin{document}
+\sloppy
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=3.4cm]{figures/LOGO_UTM.jpg}\par
+    \vspace{0.25cm}
+
+    {\bfseries\fontsize{14}{17}\selectfont
+      MINISTRY OF EDUCATION, CULTURE AND RESEARCH\par
+      OF THE REPUBLIC OF MOLDOVA\par
+      Technical University of Moldova\par
+      Faculty of Computers, Informatics and Microelectronics\par
+      Department of Software Engineering and Automation\par
+    }
+
+    \vspace{1.25cm}
+    {\bfseries\fontsize{16}{19}\selectfont Daniel Moisei FAF-241\par}
+
+    \vspace{1.35cm}
+    {\bfseries\fontsize{34}{39}\selectfont Report\par}
+    \vspace{0.2cm}
+    {\itshape\fontsize{20}{24}\selectfont Laboratory Work No. 18\par}
+    {\bfseries\itshape\fontsize{20}{24}\selectfont Operating Systems\par}
+
+    \vspace{0.8cm}
+    {\fontsize{18}{22}\selectfont Topic: A User-Level Thread Switch (xv6)\par}
+  \end{center}
+
+  \vfill
+  \begin{flushright}
+    {\fontsize{15}{18}\selectfont Checked by:}\par
+    \textbf{Reițman Patricia}, \textit{university assistant}
+  \end{flushright}
+
+  \vfill
+  \begin{center}
+    {\bfseries\fontsize{14}{17}\selectfont Chișinău - 2026}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{2}
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+The purpose of this laboratory work was to build a tiny thread library in user space, inside one xv6 program. The program \texttt{uthread} creates three threads and switches between them by saving and restoring registers, exactly like the kernel function \texttt{swtch}, but entirely in its own code. The kernel was not changed: for xv6, \texttt{uthread} is one ordinary process, and the three threads exist only inside it.
+
+Three edits were needed: the thread library in \texttt{user/uthread.c}, the switch itself in assembly in \texttt{user/uthread\_switch.S}, and a rule in the \texttt{Makefile} that links the two together.
+
+\newpage
+\section{The Switch}
+
+\subsection{The thread library}
+
+Each thread has a saved context, its own stack of 8\,KB, and a state (\texttt{FREE}, \texttt{RUNNING} or \texttt{RUNNABLE}). The skeleton of the handout had three places to complete:
+
+\begin{itemize}
+  \item \texttt{struct context}: the 14 callee-saved registers \texttt{ra}, \texttt{sp} and \texttt{s0} to \texttt{s11}, each a \texttt{uint64}, in the order in which \texttt{thread\_switch} stores them.
+  \item \texttt{thread\_create}: the context of a new thread gets \texttt{ra} set to the thread function and \texttt{sp} set to the top of the thread's stack, because the stack grows down. The first switch to the thread then ``returns'' into its function, on its own stack.
+  \item \texttt{thread\_schedule}: the next thread is marked \texttt{RUNNING}, the old thread is remembered, the next thread becomes the current one, and \texttt{thread\_switch(\&old->ctx, \&next\_thread->ctx)} is called.
+\end{itemize}
+
+\texttt{thread\_b} and \texttt{thread\_c} are copies of \texttt{thread\_a} in which \texttt{a} was changed to \texttt{b} or \texttt{c}; each waits until the other two have started.
+
+\lstinputlisting[language=C,caption={Implementation of user/uthread.c}]{../uthread.c}
+
+\subsection{thread\_switch}
+
+\texttt{thread\_switch(old, new)} has the same shape as the kernel's \texttt{swtch}: 14 \texttt{sd} instructions save \texttt{ra}, \texttt{sp} and \texttt{s0} to \texttt{s11} of the current thread at the offsets 0 to 104 of \texttt{old} (register \texttt{a0}), 14 \texttt{ld} instructions load the same registers of the next thread from \texttt{new} (register \texttt{a1}), and \texttt{ret} returns into the next thread.
+
+\lstinputlisting[caption={Implementation of user/uthread\_switch.S}]{../uthread_switch.S}
+
+\subsection{The Makefile}
+
+The line \texttt{\$U/\_uthread\textbackslash} was added to \texttt{UPROGS}, and the rule below was added at the end of the \texttt{Makefile}, so that \texttt{uthread.o} is linked together with \texttt{uthread\_switch.o}:
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}
+$U/_uthread: $U/uthread.o $U/uthread_switch.o $(ULIB) $U/user.ld
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $U/_uthread $U/uthread.o $U/uthread_switch.o $(ULIB)
+	$(OBJDUMP) -S $U/_uthread > $U/uthread.asm
+\end{lstlisting}
+\end{minipage}
+
+\newpage
+\section{Run It}
+
+\subsection{The output}
+
+After rebuilding, \texttt{uthread} printed exactly the expected output. The beginning is shown in Figure~\ref{fig:start}: each thread prints its \texttt{started} line and yields until the other two have started, then the three take turns, \texttt{c}, \texttt{a}, \texttt{b}. The order is round robin, because every \texttt{thread\_yield} switches to the next runnable thread after the current one. \texttt{thread\_c} counts first because when it starts it finds \texttt{a} and \texttt{b} already started and goes straight into its loop.
+
+\taskfigure{part2-uthread-start.png}{The beginning: the three threads start and take turns}{start}
+
+The end is shown in Figure~\ref{fig:end}. Each thread counted from 0 to 99 and exited after 100 steps. When the last one had exited, no thread was runnable and \texttt{thread\_schedule} ended the program with \texttt{thread\_schedule: no runnable threads}.
+
+\taskfigure{part2-uthread-end.png}{The end: every thread exits after 100}{end}
+
+\subsection{Answer}
+
+\texttt{thread\_switch} saves the 14 callee-saved registers of the running thread into \texttt{old}: \texttt{ra}, the return address, \texttt{sp}, the stack pointer, and \texttt{s0} to \texttt{s11}. Then it loads the same 14 registers of the next thread from \texttt{new} and executes \texttt{ret}. These registers are enough because \texttt{thread\_switch} is called like a normal C function: the compiler has already saved every caller-saved register (\texttt{t0}--\texttt{t6}, \texttt{a0}--\texttt{a7}) that the caller still needs, on the caller's own stack. Loading \texttt{sp} moves to the stack of the other thread, where its own saved values and local variables are.
+
+\texttt{ra} makes execution continue in the other thread because \texttt{ret} means ``jump to the address in \texttt{ra}''. After the loads, \texttt{ra} holds the return address of the next thread, so \texttt{ret} does not return into the thread that called \texttt{thread\_switch}, but into the other one. For a thread that has already run, this is the point right after its own call to \texttt{thread\_switch} inside \texttt{thread\_schedule}. For a new thread it is the first instruction of its function, because \texttt{thread\_create} set \texttt{ctx.ra} to the function and \texttt{ctx.sp} to the top of the thread's stack.
+
+\newpage
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+
+This laboratory work showed that switching threads needs no help from the kernel: a thread is only a set of saved registers and its own stack. Saving the callee-saved registers of one thread and loading those of another, then executing \texttt{ret}, is enough to continue in a different thread, because the loaded \texttt{ra} decides where \texttt{ret} jumps and the loaded \texttt{sp} decides which stack is used. A new thread is started by preparing these two registers by hand, so that the first switch ``returns'' into the start of its function.
+
+The three threads took turns exactly as expected, in round-robin order, each giving up the CPU voluntarily with \texttt{thread\_yield}. This is the same mechanism the xv6 kernel uses in \texttt{swtch} to switch between processes, with one difference: here the switch happens only when a thread calls \texttt{thread\_yield}, since there is no timer interrupt to take the CPU away from a thread that does not yield.
+
+\end{document}

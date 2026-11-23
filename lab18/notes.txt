@@ -1,0 +1,22 @@
+Lab 18 - A User-Level Thread Switch - answer
+
+What exactly does thread_switch save and load? Why is ra the register that makes execution
+continue in the other thread?
+
+thread_switch(old, new) saves the 14 callee-saved registers of the running thread into
+old: ra (the return address), sp (the stack pointer) and s0..s11, at offsets 0 to 104 of
+struct context. Then it loads the same 14 registers of the next thread from new, and
+executes ret.
+
+Only these registers are needed: thread_switch is called like a normal C function, so the
+compiler has already saved every caller-saved register (t0-t6, a0-a7) that the caller still
+needs on the caller's own stack. Loading sp switches to the stack of the other thread, where
+its own saved values and local variables are.
+
+ra is the register that makes execution continue in the other thread because ret means
+"jump to the address in ra". After the loads, ra holds the next thread's return address,
+so ret does not return to the thread that called thread_switch but into the other one: for a
+thread that has run before, right after its own call to thread_switch inside
+thread_schedule (then back through thread_yield into its loop); for a new thread, to the
+start of its function, because thread_create set ctx.ra = func (and ctx.sp = the top of the
+thread's own stack).
